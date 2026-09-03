@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 
 const APPROVAL_KEY = "tpi_user_approved";
 const EMAIL_KEY = "tpi_user_email";
-const RECRUITMENT_KEY = "tpi_recruitment_requests";
 
 export function Gate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"loading" | "gate" | "pending" | "approved">("loading");
@@ -84,29 +83,29 @@ export function Gate({ children }: { children: React.ReactNode }) {
     setError("");
 
     try {
-      const requests = JSON.parse(localStorage.getItem(RECRUITMENT_KEY) || "[]");
-      const newRequest = {
-        id: `req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-        nick: form.nick,
-        name: form.name,
-        age: Number(form.age) || 0,
-        ff_id: form.ffId,
-        points: Number(form.points) || 0,
-        experience: form.experience,
-        reason: form.reason,
-        contact: form.whatsapp,
-        email: form.email,
-        photo: photo || null,
-        status: "pending",
-        created_at: new Date().toISOString(),
-      };
-      requests.unshift(newRequest);
-      localStorage.setItem(RECRUITMENT_KEY, JSON.stringify(requests));
+      const res = await fetch("/api/recruitment-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nick: form.nick,
+          name: form.name,
+          age: Number(form.age) || 0,
+          ff_id: form.ffId,
+          points: Number(form.points) || 0,
+          experience: form.experience,
+          reason: form.reason,
+          contact: form.whatsapp,
+          email: form.email,
+          photo: photo || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao enviar");
 
       localStorage.setItem(EMAIL_KEY, form.email);
       setStatus("pending");
-    } catch {
-      setError("Erro ao enviar recrutamento");
+    } catch (err: any) {
+      setError(err.message || "Erro ao enviar recrutamento");
     } finally {
       setRecruiting(false);
     }

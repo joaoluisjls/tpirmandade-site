@@ -18,17 +18,6 @@ interface Request {
   photo: string | null;
 }
 
-const STORAGE_KEY = "tpi_recruitment_requests";
-
-function getRequests(): Request[] {
-  if (typeof window === "undefined") return [];
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
-}
-
-function saveRequests(reqs: Request[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reqs));
-}
-
 export default function AdminPedidos() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,9 +25,16 @@ export default function AdminPedidos() {
   const [toast, setToast] = useState("");
   const [confirmAction, setConfirmAction] = useState<{ msg: string; onYes: () => void } | null>(null);
 
-  const load = () => {
-    setRequests(getRequests());
-    setLoading(false);
+  const load = async () => {
+    try {
+      const res = await fetch("/api/recruitment-requests", { cache: "no-store" });
+      const data = await res.json();
+      setRequests(Array.isArray(data) ? data : []);
+    } catch {
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -73,25 +69,27 @@ export default function AdminPedidos() {
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Erro ao criar jogador");
-      // Salvar contato no localStorage separado
+
       const contacts = JSON.parse(localStorage.getItem("tpi_player_contacts") || "{}");
       contacts[playerId] = { whatsapp: req.contact, ff_id: req.ff_id, age: req.age, experience: req.experience, email: req.email };
       localStorage.setItem("tpi_player_contacts", JSON.stringify(contacts));
-      const all = getRequests();
-      const updated = all.map((r) => r.id === req.id ? { ...r, status: "accepted" } : r);
-      saveRequests(updated);
-      setRequests(updated);
-      // Liberar acesso no Supabase
-      try {
-        if (req.email) {
-          await fetch("/api/auth/check-access", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: req.email }),
-          });
-        }
-      } catch {}
+
+      await fetch("/api/recruitment-requests", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: req.id, status: "accepted" }),
+      });
+
+      if (req.email) {
+        await fetch("/api/auth/check-access", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: req.email }),
+        });
+      }
+
       setToast(req.nick + " foi aceito e adicionado aos jogadores!");
+      load();
     } catch (e: any) {
       setToast("Erro ao aceitar: " + (e.message || "desconhecido"));
     } finally {
@@ -100,27 +98,32 @@ export default function AdminPedidos() {
   };
 
   const reject = (req: Request) => {
-    setConfirmAction({ msg: `Rejeitar pedido de ${req.nick}?`, onYes: () => {
-      const all = getRequests();
-      const updated = all.map((r) => r.id === req.id ? { ...r, status: "rejected" } : r);
-      saveRequests(updated);
-      setRequests(updated);
+    setConfirmAction({ msg: `Rejeitar pedido de ${req.nick}?`, onYes: async () => {
+      await fetch("/api/recruitment-requests", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: req.id, status: "rejected" }),
+      });
+      load();
     }});
   };
 
   const remove = (id: string) => {
-    setConfirmAction({ msg: "Excluir este pedido permanentemente?", onYes: () => {
-      const all = getRequests().filter((r) => r.id !== id);
-      saveRequests(all);
-      setRequests(all);
+    setConfirmAction({ msg: "Excluir este pedido permanentemente?", onYes: async () => {
+      await fetch(`/api/recruitment-requests?id=${id}`, { method: "DELETE" });
+      load();
     }});
   };
 
   const removePhoto = (req: Request) => {
-    setConfirmAction({ msg: `Remover a foto de ${req.nick}?`, onYes: () => {
-      const all = getRequests().map((r) => r.id === req.id ? { ...r, photo: null } : r);
-      saveRequests(all);
-      setRequests(all);
+    setConfirmAction({ msg: `Remover a foto de ${req.nick}?`, onYes: async () => {
+      const updated = { ...req, photo: null };
+      await fetch("/api/recruitment-requests", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: req.id, status: req.status, photo: null }),
+      });
+      load();
     }});
   };
 
@@ -146,7 +149,13 @@ export default function AdminPedidos() {
           </div>
         </div>
       )}
-      <h1 className="text-2xl font-black text-white mb-6">Pedidos de Entrada</h1>
+
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-black text-white">Pedidos de Entrada</h1>
+        <button onClick={() => load()} className="px-3 py-1.5 rounded-lg bg-white/5 text-white/40 text-xs hover:bg-white/10 hover:text-white transition-colors">
+          Atualizar
+        </button>
+      </div>
 
       {loading ? <p className="text-white/40">Carregando...</p> : (
         <>
@@ -199,14 +208,14 @@ export default function AdminPedidos() {
 
           {others.length > 0 && (
             <>
-              <h2 className="text-sm font-bold text-white/30 uppercase tracking-wider mb-3">Histórico</h2>
+              <h2 className="text-sm font-bold text-white/30 uppercase tracking-wider mb-3">Historico</h2>
               <div className="rounded-xl border border-white/5 bg-white/[0.02] overflow-hidden">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-white/5">
                     <th className="text-left text-xs text-white/40 uppercase px-4 py-3">Jogador</th>
                     <th className="text-left text-xs text-white/40 uppercase px-4 py-3">Contato</th>
                     <th className="text-center text-xs text-white/40 uppercase px-4 py-3">Status</th>
-                    <th className="text-center text-xs text-white/40 uppercase px-4 py-3">Ações</th>
+                    <th className="text-center text-xs text-white/40 uppercase px-4 py-3">Acoes</th>
                   </tr></thead>
                   <tbody>
                     {others.map((req) => (
