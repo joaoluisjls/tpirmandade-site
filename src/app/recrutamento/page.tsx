@@ -20,7 +20,7 @@ export default function RecrutamentoPage() {
   const [photo, setPhoto] = useState("");
   const [photoName, setPhotoName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ nick: "", name: "", age: "", ffId: "", experience: "", reason: "", contact: "", points: "" });
+  const [form, setForm] = useState({ nick: "", name: "", age: "", ffId: "", email: "", experience: "", reason: "", contact: "", points: "" });
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -49,6 +49,7 @@ export default function RecrutamentoPage() {
         experience: form.experience,
         reason: form.reason,
         contact: form.contact,
+        email: form.email,
         photo: photo || null,
         status: "pending",
         created_at: new Date().toISOString(),
@@ -74,7 +75,7 @@ export default function RecrutamentoPage() {
           <div className="text-5xl mb-4">✅</div>
           <h1 className="text-2xl font-black text-white mb-3">RECRUTAMENTO ENVIADO!</h1>
           <p className="text-white/40 mb-6">Obrigado pelo interesse! Analisaremos seu perfil e entraremos em contato.</p>
-          <button onClick={() => { setSubmitted(false); setPhoto(""); setPhotoName(""); setForm({ nick: "", name: "", age: "", ffId: "", experience: "", reason: "", contact: "", points: "" }); }} className="px-6 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-sm hover:bg-white/10 transition-colors">
+          <button onClick={() => { setSubmitted(false); setPhoto(""); setPhotoName(""); setForm({ nick: "", name: "", age: "", ffId: "", email: "", experience: "", reason: "", contact: "", points: "" }); }} className="px-6 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-sm hover:bg-white/10 transition-colors">
             Enviar outro
           </button>
         </div>
@@ -95,6 +96,7 @@ export default function RecrutamentoPage() {
               { name: "name", label: "Nome", type: "text", required: true, sm: false },
               { name: "age", label: "Idade", type: "number", required: true, sm: false },
               { name: "ffId", label: "ID do Free Fire", type: "text", required: true, sm: false },
+              { name: "email", label: "Email", type: "email", required: true, sm: false },
               { name: "points", label: "Pontos atuais", type: "number", required: false, sm: false },
               { name: "experience", label: "Experiência", type: "select", required: false, sm: false },
               { name: "contact", label: "WhatsApp / Discord", type: "text", required: true, sm: true },

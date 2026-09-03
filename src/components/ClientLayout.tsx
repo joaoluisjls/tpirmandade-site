@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { Gate } from "@/components/Gate";
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,10 +14,10 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <>
+    <Gate>
       <Navbar />
       <main className="min-h-screen">{children}</main>
       <Footer />
-    </>
+    </Gate>
   );
 }

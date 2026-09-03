@@ -12,6 +12,7 @@ interface Request {
   experience: string;
   reason: string;
   contact: string;
+  email: string;
   status: string;
   created_at: string;
   photo: string | null;
@@ -80,6 +81,16 @@ export default function AdminPedidos() {
       const updated = all.map((r) => r.id === req.id ? { ...r, status: "accepted" } : r);
       saveRequests(updated);
       setRequests(updated);
+      // Liberar acesso no Supabase
+      try {
+        if (req.email) {
+          await fetch("/api/auth/check-access", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: req.email }),
+          });
+        }
+      } catch {}
       setToast(req.nick + " foi aceito e adicionado aos jogadores!");
     } catch (e: any) {
       setToast("Erro ao aceitar: " + (e.message || "desconhecido"));
