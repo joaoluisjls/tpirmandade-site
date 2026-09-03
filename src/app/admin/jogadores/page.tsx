@@ -109,6 +109,11 @@ export default function AdminJogadores() {
                 <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-1">Nome</label>
                 <input type="text" value={editing.name} onChange={(e) => setEditing(p => p ? { ...p, name: e.target.value } : p)} className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" />
               </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-1">Foto de Perfil (URL)</label>
+                <input type="text" value={editing.avatar} onChange={(e) => setEditing(p => p ? { ...p, avatar: e.target.value } : p)} placeholder="https://exemplo.com/foto.jpg" className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" />
+                {editing.avatar && <img src={editing.avatar} alt="Preview" className="w-16 h-16 rounded-xl object-cover mt-2" />}
+              </div>
               <div>
                 <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-1">Cargo</label>
                 <input type="text" value={editing.role} onChange={(e) => setEditing(p => p ? { ...p, role: e.target.value } : p)} className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" />
