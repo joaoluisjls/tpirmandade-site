@@ -32,6 +32,10 @@ export const metadata: Metadata = {
     description: GUILD.description,
   },
   robots: { index: true, follow: true },
+  icons: {
+    icon: "/logo.jpg",
+    apple: "/apple-touch-icon.jpg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -40,7 +44,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <meta name="theme-color" content="#0a0a0f" />
         <meta name="color-scheme" content="dark" />
-        <link rel="icon" type="image/jpeg" href="/logo.jpg" />
+        <link rel="icon" type="image/jpeg" href="/logo.jpg?v=2" />
+        <link rel="apple-touch-icon" type="image/jpeg" href="/apple-touch-icon.jpg?v=2" />
       </head>
       <body className="min-h-full antialiased">
         <ClientLayout>
