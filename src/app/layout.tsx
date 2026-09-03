@@ -40,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <meta name="theme-color" content="#0a0a0f" />
         <meta name="color-scheme" content="dark" />
+        <link rel="icon" type="image/jpeg" href="/logo.jpg" />
       </head>
       <body className="min-h-full antialiased">
         <ClientLayout>
