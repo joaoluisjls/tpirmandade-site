@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const APPROVAL_KEY = "tpi_user_approved";
 const EMAIL_KEY = "tpi_user_email";
@@ -8,11 +8,22 @@ const RECRUITMENT_KEY = "tpi_recruitment_requests";
 
 export function Gate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"loading" | "gate" | "pending" | "approved">("loading");
-  const [email, setEmail] = useState("");
-  const [nick, setNick] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
   const [recruiting, setRecruiting] = useState(false);
   const [error, setError] = useState("");
+  const [photo, setPhoto] = useState("");
+  const [photoName, setPhotoName] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [form, setForm] = useState({
+    email: "",
+    nick: "",
+    name: "",
+    age: "",
+    ffId: "",
+    points: "",
+    experience: "",
+    whatsapp: "",
+    reason: "",
+  });
 
   useEffect(() => {
     const approved = localStorage.getItem(APPROVAL_KEY);
@@ -24,7 +35,7 @@ export function Gate({ children }: { children: React.ReactNode }) {
     }
 
     if (savedEmail) {
-      setEmail(savedEmail);
+      setForm((f) => ({ ...f, email: savedEmail }));
       checkAccess(savedEmail);
       return;
     }
@@ -47,35 +58,52 @@ export function Gate({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { setError("Foto muito grande (max 2MB)"); return; }
+    const reader = new FileReader();
+    reader.onload = () => { setPhoto(reader.result as string); setPhotoName(file.name); };
+    reader.readAsDataURL(file);
+  };
+
+  const removePhoto = () => { setPhoto(""); setPhotoName(""); if (fileRef.current) fileRef.current.value = ""; };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
   const handleRecruit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !nick) { setError("Email e nick são obrigatórios"); return; }
+    if (!form.email || !form.nick || !form.name || !form.ffId) {
+      setError("Preencha email, nick, nome e ID do Free Fire");
+      return;
+    }
 
     setRecruiting(true);
     setError("");
 
     try {
-      // Save to localStorage for admin to see
       const requests = JSON.parse(localStorage.getItem(RECRUITMENT_KEY) || "[]");
       const newRequest = {
-        id: `req_${Date.now()}`,
-        nick,
-        name: nick,
-        age: 0,
-        ff_id: "",
-        points: 0,
-        experience: "",
-        reason: "Recrutamento via site",
-        contact: whatsapp,
+        id: `req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+        nick: form.nick,
+        name: form.name,
+        age: Number(form.age) || 0,
+        ff_id: form.ffId,
+        points: Number(form.points) || 0,
+        experience: form.experience,
+        reason: form.reason,
+        contact: form.whatsapp,
+        email: form.email,
+        photo: photo || null,
         status: "pending",
         created_at: new Date().toISOString(),
-        photo: null,
       };
-      requests.push(newRequest);
+      requests.unshift(newRequest);
       localStorage.setItem(RECRUITMENT_KEY, JSON.stringify(requests));
 
-      // Save email for later check
-      localStorage.setItem(EMAIL_KEY, email);
+      localStorage.setItem(EMAIL_KEY, form.email);
       setStatus("pending");
     } catch {
       setError("Erro ao enviar recrutamento");
@@ -101,17 +129,17 @@ export function Gate({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4">
         <div className="w-full max-w-md text-center">
           <img src="/logo.jpg" alt="TP&IRMANDADE" className="w-20 h-20 rounded-2xl object-cover mx-auto mb-6" />
-          <h1 className="text-2xl font-black text-white mb-3">Aguardando Aprovação</h1>
+          <h1 className="text-2xl font-black text-white mb-3">Aguardando Aprovacao</h1>
           <p className="text-white/40 text-sm mb-6">
-            Seu pedido de recrutamento foi enviado. Um administrador irá analisar e liberar seu acesso.
+            Seu pedido de recrutamento foi enviado. Um administrador ira analisar e liberar seu acesso.
           </p>
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 mb-6">
             <p className="text-xs text-white/30 mb-1">Email cadastrado:</p>
-            <p className="text-sm text-primary font-bold">{email}</p>
+            <p className="text-sm text-primary font-bold">{form.email}</p>
           </div>
           <div className="flex items-center justify-center gap-2 text-white/30 text-xs">
             <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
-            Aguardando aprovação do administrador...
+            Aguardando aprovacao do administrador...
           </div>
           <button onClick={() => { localStorage.removeItem(APPROVAL_KEY); localStorage.removeItem(EMAIL_KEY); setStatus("gate"); }} className="mt-6 text-xs text-white/20 hover:text-white/40 transition-colors">
             Usar outro email
@@ -122,39 +150,103 @@ export function Gate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <img src="/logo.jpg" alt="TP&IRMANDADE" className="w-20 h-20 rounded-2xl object-cover mx-auto mb-6" />
-          <h1 className="text-3xl font-black text-white mb-2">TP&IRMANDADE</h1>
-          <p className="text-white/40 text-sm">Para acessar o site, faça seu recrutamento</p>
+    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-lg">
+        <div className="text-center mb-6">
+          <img src="/logo.jpg" alt="TP&IRMANDADE" className="w-16 h-16 rounded-2xl object-cover mx-auto mb-4" />
+          <h1 className="text-2xl font-black text-white mb-1">TP&IRMANDADE</h1>
+          <p className="text-white/40 text-sm">Para acessar o site, faca seu recrutamento</p>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-          <h2 className="text-lg font-bold text-white mb-4">📋 Recrutamento</h2>
+          <h2 className="text-lg font-bold text-white mb-4">Recrutamento</h2>
 
           {error && <div className="text-sm text-red-400 bg-red-500/10 rounded-lg px-4 py-2 mb-3">{error}</div>}
 
           <form onSubmit={handleRecruit} className="space-y-3">
-            <div>
-              <label className="block text-xs font-bold text-white/40 uppercase mb-1">Seu Email *</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="seu@email.com" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-white/40 uppercase mb-1">Email *</label>
+                <input type="email" name="email" value={form.email} onChange={handleChange} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="seu@email.com" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-white/40 uppercase mb-1">Nick *</label>
+                <input type="text" name="nick" value={form.nick} onChange={handleChange} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="SeuNick" />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-white/40 uppercase mb-1">Nick no Free Fire *</label>
-              <input type="text" value={nick} onChange={(e) => setNick(e.target.value)} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="SeuNick" />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-white/40 uppercase mb-1">Nome Completo *</label>
+                <input type="text" name="name" value={form.name} onChange={handleChange} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="Seu nome" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-white/40 uppercase mb-1">Idade</label>
+                <input type="number" name="age" value={form.age} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="18" />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-white/40 uppercase mb-1">WhatsApp (opcional)</label>
-              <input type="text" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="(00) 00000-0000" />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-white/40 uppercase mb-1">ID Free Fire *</label>
+                <input type="text" name="ffId" value={form.ffId} onChange={handleChange} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="123456789" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-white/40 uppercase mb-1">Pontos Atuais</label>
+                <input type="number" name="points" value={form.points} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="0" />
+              </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-white/40 uppercase mb-1">Experiencia</label>
+                <select name="experience" value={form.experience} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50">
+                  <option value="" className="bg-[#0a0a0f]">Selecione</option>
+                  <option value="iniciante" className="bg-[#0a0a0f]">Iniciante</option>
+                  <option value="intermediario" className="bg-[#0a0a0f]">Intermediario</option>
+                  <option value="avancado" className="bg-[#0a0a0f]">Avancado</option>
+                  <option value="profissional" className="bg-[#0a0a0f]">Profissional</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-white/40 uppercase mb-1">WhatsApp</label>
+                <input type="text" name="whatsapp" value={form.whatsapp} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="(00) 00000-0000" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-white/40 uppercase mb-1">Foto de Perfil</label>
+              <div className="flex items-center gap-3">
+                <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" id="gate-photo" />
+                <label htmlFor="gate-photo" className="px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 hover:text-white cursor-pointer transition-colors">
+                  {photoName ? "Trocar foto" : "Escolher foto"}
+                </label>
+                {photoName && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white/40 truncate max-w-[120px]">{photoName}</span>
+                    <button type="button" onClick={removePhoto} className="text-red-400 text-xs hover:text-red-300">x</button>
+                  </div>
+                )}
+              </div>
+              {photo && (
+                <div className="mt-2">
+                  <img src={photo} alt="Preview" className="w-16 h-16 rounded-full object-cover border-2 border-white/10" />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-white/40 uppercase mb-1">Por que quer entrar? *</label>
+              <textarea name="reason" value={form.reason} onChange={handleChange} required rows={2} placeholder="Conte-nos por que quer fazer parte..." className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50 resize-none" />
+            </div>
+
             <button type="submit" disabled={recruiting} className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50">
               {recruiting ? "Enviando..." : "ENVIAR RECRUTAMENTO"}
             </button>
           </form>
 
-          <p className="text-[10px] text-white/20 text-center mt-4">
-            Após enviar, aguarde um administrador liberar seu acesso.
+          <p className="text-[10px] text-white/20 text-center mt-3">
+            Apos enviar, aguarde um administrador liberar seu acesso.
           </p>
         </div>
       </div>

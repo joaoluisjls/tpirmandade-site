@@ -75,7 +75,7 @@ export default function AdminPedidos() {
       if (!res.ok) throw new Error(result.error || "Erro ao criar jogador");
       // Salvar contato no localStorage separado
       const contacts = JSON.parse(localStorage.getItem("tpi_player_contacts") || "{}");
-      contacts[playerId] = { whatsapp: req.contact, ff_id: req.ff_id, age: req.age, experience: req.experience };
+      contacts[playerId] = { whatsapp: req.contact, ff_id: req.ff_id, age: req.age, experience: req.experience, email: req.email };
       localStorage.setItem("tpi_player_contacts", JSON.stringify(contacts));
       const all = getRequests();
       const updated = all.map((r) => r.id === req.id ? { ...r, status: "accepted" } : r);
@@ -169,11 +169,14 @@ export default function AdminPedidos() {
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-white/50 mb-2">
                       <div><span className="text-white/30">Nome:</span> {req.name}</div>
-                      <div><span className="text-white/30">Idade:</span> {req.age}</div>
+                      <div><span className="text-white/30">Idade:</span> {req.age || "—"}</div>
                       <div><span className="text-white/30">Pontos:</span> {req.points || 0}</div>
                       <div><span className="text-white/30">Exp:</span> {req.experience || "—"}</div>
                     </div>
-                    <div className="text-xs text-white/40 mb-1"><span className="text-white/30">Contato:</span> <span className="text-green-400">{req.contact}</span></div>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-white/40 mb-2">
+                      <div><span className="text-white/30">Email:</span> <span className="text-blue-400">{req.email || "—"}</span></div>
+                      <div><span className="text-white/30">WhatsApp:</span> <span className="text-green-400">{req.contact || "—"}</span></div>
+                    </div>
                     <div className="text-xs text-white/50 italic">&ldquo;{req.reason}&rdquo;</div>
                   </div>
                   <div className="flex gap-2 shrink-0 flex-wrap justify-end">
