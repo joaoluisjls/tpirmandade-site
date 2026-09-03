@@ -33,7 +33,7 @@ export default function AdminJogadores() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const load = () => {
-    fetch("/api/players").then((r) => r.json()).then((d) => {
+    fetch("/api/players", { cache: "no-store" }).then((r) => r.json()).then((d) => {
       setPlayers(d);
       setContacts(getContacts());
       setLoading(false);

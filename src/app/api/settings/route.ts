@@ -7,7 +7,7 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const settings: Record<string, string> = {};
   data?.forEach((s) => { settings[s.key] = s.value; });
-  return NextResponse.json(settings, { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" } });
+  return NextResponse.json(settings);
 }
 
 export async function PUT(request: Request) {

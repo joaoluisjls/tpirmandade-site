@@ -11,7 +11,7 @@ export default function AdminRanking() {
   const [toast, setToast] = useState("");
 
   useEffect(() => {
-    fetch("/api/players").then((r) => r.json()).then((d) => {
+    fetch("/api/players", { cache: "no-store" }).then((r) => r.json()).then((d) => {
       setPlayers(d.map((p: any) => ({ id: p.id, nick: p.nick, role: p.role, status: p.status, points: p.points })).sort((a: Player, b: Player) => b.points - a.points));
     });
   }, []);
@@ -21,7 +21,7 @@ export default function AdminRanking() {
     setEditingId(null);
     setToast("Pontos atualizados!");
     setTimeout(() => setToast(""), 3000);
-    fetch("/api/players").then((r) => r.json()).then((d) => {
+    fetch("/api/players", { cache: "no-store" }).then((r) => r.json()).then((d) => {
       setPlayers(d.map((p: any) => ({ id: p.id, nick: p.nick, role: p.role, status: p.status, points: p.points })).sort((a: Player, b: Player) => b.points - a.points));
     });
   };

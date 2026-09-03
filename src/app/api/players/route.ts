@@ -5,7 +5,7 @@ export async function GET() {
   const supabase = getAnonClient();
   const { data, error } = await supabase.from("players").select("*").order("points", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data, { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" } });
+  return NextResponse.json(data);
 }
 
 export async function POST(request: Request) {

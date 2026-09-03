@@ -14,7 +14,7 @@ export default function AdminGuerras() {
   const [toast, setToast] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const load = () => fetch("/api/wars").then((r) => r.json()).then(setWars);
+  const load = () => fetch("/api/wars", { cache: "no-store" }).then((r) => r.json()).then(setWars);
   useEffect(() => { load(); }, []);
 
   const save = async () => {
@@ -22,21 +22,24 @@ export default function AdminGuerras() {
     const isNew = editing.id.startsWith("new_");
     const method = isNew ? "POST" : "PUT";
     const body = isNew ? { ...editing, id: undefined } : editing;
-    await fetch("/api/wars", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    setShowForm(false); setEditing(null); load();
+    const res = await fetch("/api/wars", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) { setToast("Erro ao salvar!"); return; }
+    setShowForm(false); setEditing(null);
+    await load();
     setToast(isNew ? "Guerra criada!" : "Guerra salva!");
   };
 
-  const remove = async (id: string) => {
+  const remove = (id: string) => {
     setConfirmDelete(id);
   };
 
   const confirmRemove = async () => {
     if (!confirmDelete) return;
-    await fetch("/api/wars", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: confirmDelete }) });
+    const res = await fetch("/api/wars", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: confirmDelete }) });
+    if (!res.ok) { setToast("Erro ao excluir!"); setConfirmDelete(null); return; }
     setConfirmDelete(null);
+    await load();
     setToast("Guerra excluída!");
-    load();
   };
 
   const selectField = (label: string, key: keyof War, options: { value: string; label: string }[]) => (

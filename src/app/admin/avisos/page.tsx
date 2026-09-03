@@ -13,7 +13,7 @@ export default function AdminAvisos() {
   const [toast, setToast] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const load = () => fetch("/api/announcements").then((r) => r.json()).then(setItems);
+  const load = () => fetch("/api/announcements", { cache: "no-store" }).then((r) => r.json()).then(setItems);
   useEffect(() => { load(); }, []);
 
   const save = async () => {

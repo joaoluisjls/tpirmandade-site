@@ -11,7 +11,7 @@ export default function AdminRegras() {
   const [toast, setToast] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
-  const load = () => fetch("/api/rules").then((r) => r.json()).then(setRules);
+  const load = () => fetch("/api/rules", { cache: "no-store" }).then((r) => r.json()).then(setRules);
   useEffect(() => { load(); }, []);
 
   const save = async () => {

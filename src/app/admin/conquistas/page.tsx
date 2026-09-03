@@ -13,7 +13,7 @@ export default function AdminConquistas() {
   const [toast, setToast] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const load = () => fetch("/api/achievements").then((r) => r.json()).then(setItems);
+  const load = () => fetch("/api/achievements", { cache: "no-store" }).then((r) => r.json()).then(setItems);
   useEffect(() => { load(); }, []);
 
   const save = async () => {

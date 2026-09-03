@@ -5,7 +5,7 @@ export async function GET() {
   const supabase = getAnonClient();
   const { data, error } = await supabase.from("rules").select("*").order("id", { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data, { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" } });
+  return NextResponse.json(data);
 }
 
 export async function POST(request: Request) {
