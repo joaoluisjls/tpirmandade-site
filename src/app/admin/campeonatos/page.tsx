@@ -49,7 +49,7 @@ export default function AdminCampeonatos() {
 
   useEffect(() => { load(); }, []);
 
-  const save = async (champ: Championship) => {
+  const save = async (champ: Championship): Promise<Championship | null> => {
     const res = await fetch("/api/championships", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -57,6 +57,14 @@ export default function AdminCampeonatos() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Erro ao salvar");
+    return champ;
+  };
+
+  const reloadAndFind = async (id: string): Promise<Championship | null> => {
+    await load();
+    const res = await fetch("/api/championships", { cache: "no-store" });
+    const all: Championship[] = await res.json();
+    return all.find((c) => c.id === id) || null;
   };
 
   const handleCreate = async () => {
@@ -84,11 +92,12 @@ export default function AdminCampeonatos() {
     if (!selected) return;
     setSaving(true);
     try {
-      await save({ ...selected, ...form } as Championship);
+      const merged = { ...selected, ...form } as Championship;
+      await save(merged);
       setToast("Campeonato atualizado!");
+      const updated = await reloadAndFind(selected.id);
+      if (updated) setSelected(updated);
       await load();
-      const updated = championships.find((c) => c.id === selected.id);
-      if (updated) setSelected({ ...updated, ...form } as Championship);
     } catch (e: any) {
       setToast(e.message || "Erro ao atualizar");
     } finally {
@@ -118,9 +127,10 @@ export default function AdminCampeonatos() {
       updated.matches = generateBracket(updated.participants);
     }
     await save(updated);
-    setSelected(updated);
     setNewParticipant("");
     setNewParticipantLogo("");
+    const fresh = await reloadAndFind(selected.id);
+    if (fresh) setSelected(fresh);
     await load();
   };
 
@@ -132,7 +142,8 @@ export default function AdminCampeonatos() {
       updated.matches = generateBracket(updated.participants);
       updated.champion = getChampion(updated.matches);
       await save(updated);
-      setSelected(updated);
+      const fresh = await reloadAndFind(selected.id);
+      if (fresh) setSelected(fresh);
       await load();
     }});
   };
@@ -163,8 +174,9 @@ export default function AdminCampeonatos() {
       }
     }
     await save(updated);
-    setSelected(updated);
     setEditParticipant(null);
+    const fresh = await reloadAndFind(selected.id);
+    if (fresh) setSelected(fresh);
     await load();
   };
 
@@ -177,8 +189,9 @@ export default function AdminCampeonatos() {
       matches: generateBracket(selected.participants),
     };
     await save(updated);
-    setSelected(updated);
     setToast("Campeonato iniciado!");
+    const fresh = await reloadAndFind(selected.id);
+    if (fresh) setSelected(fresh);
     await load();
   };
 
@@ -197,8 +210,9 @@ export default function AdminCampeonatos() {
       updated.status = "finished";
     }
     await save(updated);
-    setSelected(updated);
     setShowMatchModal(null);
+    const fresh = await reloadAndFind(selected.id);
+    if (fresh) setSelected(fresh);
     await load();
   };
 
@@ -211,8 +225,9 @@ export default function AdminCampeonatos() {
       m.score2 = matchScore2 ? Number(matchScore2) : null;
     }
     await save(updated);
-    setSelected(updated);
     setShowMatchModal(null);
+    const fresh = await reloadAndFind(selected.id);
+    if (fresh) setSelected(fresh);
     await load();
   };
 
@@ -223,8 +238,9 @@ export default function AdminCampeonatos() {
     updated.champion = getChampion(updated.matches);
     updated.status = updated.champion ? "finished" : "in_progress";
     await save(updated);
-    setSelected(updated);
     setShowMatchModal(null);
+    const fresh = await reloadAndFind(selected.id);
+    if (fresh) setSelected(fresh);
     await load();
   };
 
