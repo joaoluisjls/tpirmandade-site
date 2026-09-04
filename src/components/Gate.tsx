@@ -34,6 +34,9 @@ export function Gate({ children }: { children: React.ReactNode }) {
     reason: "",
   });
 
+  const [checkEmail, setCheckEmail] = useState("");
+  const [checking, setChecking] = useState(false);
+
   useEffect(() => {
     const approved = localStorage.getItem(APPROVAL_KEY);
     const savedEmail = localStorage.getItem(EMAIL_KEY);
@@ -45,12 +48,36 @@ export function Gate({ children }: { children: React.ReactNode }) {
 
     if (savedEmail) {
       setForm((f) => ({ ...f, email: savedEmail }));
+      setCheckEmail(savedEmail);
       checkAccess(savedEmail);
       return;
     }
 
     setStatus("gate");
   }, []);
+
+  const handleCheckEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!checkEmail) return;
+    setChecking(true);
+    try {
+      const res = await fetch(`/api/auth/check-access?email=${encodeURIComponent(checkEmail)}`);
+      const data = await res.json();
+      if (data.approved) {
+        localStorage.setItem(APPROVAL_KEY, "true");
+        localStorage.setItem(EMAIL_KEY, checkEmail);
+        setStatus("approved");
+      } else {
+        setForm((f) => ({ ...f, email: checkEmail }));
+        setStatus("gate");
+      }
+    } catch {
+      setForm((f) => ({ ...f, email: checkEmail }));
+      setStatus("gate");
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const checkAccess = async (emailToCheck: string) => {
     try {
@@ -148,6 +175,32 @@ export function Gate({ children }: { children: React.ReactNode }) {
 
   if (status === "approved") {
     return <>{children}</>;
+  }
+
+  if (status === "gate" && !form.email) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <img src="/logo.jpg" alt="TP&IRMANDADE" className="w-20 h-20 rounded-2xl object-cover mx-auto mb-6" />
+          <h1 className="text-2xl font-black text-white mb-3">TP&IRMANDADE</h1>
+          <p className="text-white/40 text-sm mb-6">Para acessar o site, faca seu recrutamento</p>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+            <h2 className="text-lg font-bold text-white mb-4">Voce ja tem cadastro?</h2>
+            <p className="text-white/30 text-sm mb-4">Coloque seu email para verificar se ja foi aprovado</p>
+            <form onSubmit={handleCheckEmail} className="space-y-3">
+              <input type="email" value={checkEmail} onChange={(e) => setCheckEmail(e.target.value)} required placeholder="seu@email.com" className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" />
+              <button type="submit" disabled={checking} className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/80 disabled:opacity-50">
+                {checking ? "Verificando..." : "Verificar"}
+              </button>
+            </form>
+            <button onClick={() => setForm({ ...form, email: " " })} className="mt-4 text-xs text-white/20 hover:text-white/40 transition-colors">
+              Nao tenho cadastro - quero me inscrever
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (status === "pending") {
