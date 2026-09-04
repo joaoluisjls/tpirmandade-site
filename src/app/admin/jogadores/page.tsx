@@ -16,6 +16,7 @@ const ROLE_OPTIONS = [
   { id: "suporte", label: "Suporte" },
   { id: "capitao", label: "Capitao" },
   { id: "granadeiro", label: "Granadeiro" },
+  { id: "curandeiro", label: "Curandeiro" },
 ];
 
 async function fetchContacts(): Promise<Record<string, ContactInfo>> {

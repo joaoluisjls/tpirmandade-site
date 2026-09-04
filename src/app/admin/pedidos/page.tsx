@@ -25,6 +25,7 @@ const ROLE_LABELS: Record<string, string> = {
   suporte: "Suporte",
   capitao: "Capitao",
   granadeiro: "Granadeiro",
+  curandeiro: "Curandeiro",
 };
 
 export default function AdminPedidos() {

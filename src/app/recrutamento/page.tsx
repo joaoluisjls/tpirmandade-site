@@ -8,6 +8,7 @@ const ROLE_OPTIONS = [
   { id: "suporte", label: "Suporte" },
   { id: "capitao", label: "Capitao" },
   { id: "granadeiro", label: "Granadeiro" },
+  { id: "curandeiro", label: "Curandeiro" },
 ];
 
 const STORAGE_KEY = "tpi_recruitment_requests";
