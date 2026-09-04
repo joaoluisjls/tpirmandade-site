@@ -11,17 +11,6 @@ const ROLE_OPTIONS = [
   { id: "curandeiro", label: "Curandeiro" },
 ];
 
-const STORAGE_KEY = "tpi_recruitment_requests";
-
-function getRequests() {
-  if (typeof window === "undefined") return [];
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
-}
-
-function saveRequests(reqs: any[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reqs));
-}
-
 export default function RecrutamentoPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -35,7 +24,7 @@ export default function RecrutamentoPage() {
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { setError("Foto muito grande (máx 2MB)"); return; }
+    if (file.size > 2 * 1024 * 1024) { setError("Foto muito grande (max 2MB)"); return; }
     const reader = new FileReader();
     reader.onload = () => { setPhoto(reader.result as string); setPhotoName(file.name); };
     reader.readAsDataURL(file);
@@ -60,28 +49,28 @@ export default function RecrutamentoPage() {
     setLoading(true);
     setError("");
     try {
-      const requests = getRequests();
-      const newReq = {
-        id: "req_" + Date.now() + "_" + Math.random().toString(36).substring(2, 8),
-        nick: form.nick,
-        name: form.name,
-        age: Number(form.age),
-        ff_id: form.ffId,
-        points: Number(form.points) || 0,
-        experience: form.experience,
-        reason: form.reason,
-        contact: form.contact,
-        email: form.email,
-        photo: photo || null,
-        roles,
-        status: "pending",
-        created_at: new Date().toISOString(),
-      };
-      requests.unshift(newReq);
-      saveRequests(requests);
+      const res = await fetch("/api/recruitment-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nick: form.nick,
+          name: form.name,
+          age: Number(form.age) || 0,
+          ff_id: form.ffId,
+          points: Number(form.points) || 0,
+          experience: form.experience,
+          reason: form.reason,
+          contact: form.contact,
+          email: form.email,
+          photo,
+          roles,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao enviar");
       setSubmitted(true);
-    } catch {
-      setError("Erro ao enviar. Tente novamente.");
+    } catch (err: any) {
+      setError(err.message || "Erro ao enviar. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -106,7 +95,7 @@ export default function RecrutamentoPage() {
           <div className="text-5xl mb-4">✅</div>
           <h1 className="text-2xl font-black text-white mb-3">RECRUTAMENTO ENVIADO!</h1>
           <p className="text-white/40 mb-6">Obrigado pelo interesse! Analisaremos seu perfil e entraremos em contato.</p>
-          <button onClick={() => { setSubmitted(false); setPhoto(""); setPhotoName(""); setForm({ nick: "", name: "", age: "", ffId: "", email: "", experience: "", reason: "", contact: "", points: "" }); }} className="px-6 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-sm hover:bg-white/10 transition-colors">
+          <button onClick={() => { setSubmitted(false); setPhoto(""); setPhotoName(""); setRoles([]); setForm({ nick: "", name: "", age: "", ffId: "", email: "", experience: "", reason: "", contact: "", points: "" }); }} className="px-6 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-sm hover:bg-white/10 transition-colors">
             Enviar outro
           </button>
         </div>
