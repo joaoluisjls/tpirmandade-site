@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { Match, Championship, Participant } from "@/lib/bracket";
 import { getRoundName } from "@/lib/bracket";
 
@@ -14,14 +14,14 @@ interface BracketViewProps {
 function DraggableParticipant({ participant, used }: { participant: Participant; used: boolean }) {
   return (
     <div
-      draggable={!used}
+      draggable
       onDragStart={(e) => {
         e.dataTransfer.setData("participantId", participant.id);
         e.dataTransfer.effectAllowed = "move";
       }}
       className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-all ${
         used
-          ? "border-white/5 bg-white/[0.02] opacity-30 cursor-not-allowed"
+          ? "border-white/5 bg-white/[0.02] opacity-40 cursor-grab"
           : "border-primary/20 bg-primary/5 hover:border-primary/40 cursor-grab active:cursor-grabbing"
       }`}
     >
@@ -31,16 +31,67 @@ function DraggableParticipant({ participant, used }: { participant: Participant;
         <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-[8px] text-white/40 font-bold">{participant.name[0]}</div>
       )}
       <span className="text-white/70 truncate">{participant.name}</span>
-      {!used && <span className="text-primary/40 ml-auto">&#9776;</span>}
+      <span className="text-primary/40 ml-auto text-[10px]">&#9776;</span>
     </div>
   );
 }
 
-function MatchCard({ match, onMatchClick, admin, onDrop }: {
+function SlotDrop({ match, slot, admin, isFinished, children }: {
+  match: Match;
+  slot: 1 | 2;
+  admin?: boolean;
+  isFinished: boolean;
+  children: React.ReactNode;
+  onDrop?: (participantId: string, matchId: string, slot: 1 | 2) => void;
+}) {
+  const participant = slot === 1 ? match.participant1 : match.participant2;
+  const otherParticipant = slot === 1 ? match.participant2 : match.participant1;
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!admin || isFinished) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    e.currentTarget.classList.add("ring-2", "ring-primary/50", "bg-primary/10");
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove("ring-2", "ring-primary/50", "bg-primary/10");
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove("ring-2", "ring-primary/50", "bg-primary/10");
+    if (!admin || isFinished) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pid = e.dataTransfer.getData("participantId");
+    if (pid && pid !== otherParticipant?.id) {
+      const event = new CustomEvent("bracket-drop", { detail: { participantId: pid, matchId: match.id, slot } });
+      window.dispatchEvent(event);
+    }
+  };
+
+  return (
+    <div
+      draggable={admin && !!participant && !isFinished}
+      onDragStart={(e) => {
+        if (!participant || isFinished) return;
+        e.dataTransfer.setData("participantId", participant.id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={admin && !isFinished ? "min-h-[36px] rounded transition-all" : ""}
+    >
+      {children}
+    </div>
+  );
+}
+
+function MatchCard({ match, onMatchClick, admin }: {
   match: Match;
   onMatchClick?: (match: Match) => void;
   admin?: boolean;
-  onDrop?: (participantId: string, matchId: string, slot: 1 | 2) => void;
 }) {
   const p1 = match.participant1;
   const p2 = match.participant2;
@@ -50,7 +101,6 @@ function MatchCard({ match, onMatchClick, admin, onDrop }: {
   const isFinished = match.status === "finished";
   const isP1Winner = match.winner === p1?.id;
   const isP2Winner = match.winner === p2?.id;
-  const canDrop = admin && !isFinished;
 
   return (
     <div
@@ -65,67 +115,49 @@ function MatchCard({ match, onMatchClick, admin, onDrop }: {
         {match.id.replace("match_", "").replace("_", " ")}
       </div>
 
-      {/* Slot 1 */}
-      <div
-        className={`flex items-center ${!p1 || isBye1 ? "opacity-30" : ""} ${canDrop ? "min-h-[36px]" : ""}`}
-        onDragOver={(e) => { if (canDrop) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } }}
-        onDrop={(e) => {
-          if (!canDrop) return;
-          e.preventDefault();
-          e.stopPropagation();
-          const pid = e.dataTransfer.getData("participantId");
-          if (pid) onDrop?.(pid, match.id, 1);
-        }}
-      >
-        <div className="flex-1 px-3 py-2 flex items-center gap-2">
-          {p1?.logo ? (
-            <img src={p1.logo} alt="" className="w-5 h-5 rounded object-cover" />
-          ) : (
-            <div className="w-5 h-5 rounded bg-white/5 flex items-center justify-center text-[8px] text-white/30">
-              {p1?.name?.[0] || "?"}
-            </div>
-          )}
-          <span className={`text-xs truncate ${isP1Winner ? "text-green-400 font-bold" : "text-white/70"}`}>
-            {p1?.name || (canDrop ? "Arraste aqui" : "A definir")}
+      <SlotDrop match={match} slot={1} admin={admin} isFinished={isFinished}>
+        <div className={`flex items-center ${!p1 || isBye1 ? "opacity-30" : ""}`}>
+          <div className="flex-1 px-3 py-2 flex items-center gap-2">
+            {p1?.logo ? (
+              <img src={p1.logo} alt="" className="w-5 h-5 rounded object-cover" />
+            ) : (
+              <div className="w-5 h-5 rounded bg-white/5 flex items-center justify-center text-[8px] text-white/30">
+                {p1?.name?.[0] || "?"}
+              </div>
+            )}
+            <span className={`text-xs truncate ${isP1Winner ? "text-green-400 font-bold" : "text-white/70"}`}>
+              {p1?.name || (admin && !isFinished ? "Arraste aqui" : "A definir")}
+            </span>
+            {isP1Winner && <span className="text-green-400 text-[10px]">&#9654;</span>}
+          </div>
+          <span className={`text-xs font-bold px-2 ${isP1Winner ? "text-green-400" : "text-white/30"}`}>
+            {match.score1 ?? (isBye1 || !p1 ? "-" : "")}
           </span>
-          {isP1Winner && <span className="text-green-400 text-[10px]">&#9654;</span>}
         </div>
-        <span className={`text-xs font-bold px-2 ${isP1Winner ? "text-green-400" : "text-white/30"}`}>
-          {match.score1 ?? (isBye1 || !p1 ? "-" : "")}
-        </span>
-      </div>
+      </SlotDrop>
 
       <div className="border-t border-white/5" />
 
-      {/* Slot 2 */}
-      <div
-        className={`flex items-center ${!p2 || isBye2 ? "opacity-30" : ""} ${canDrop ? "min-h-[36px]" : ""}`}
-        onDragOver={(e) => { if (canDrop) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } }}
-        onDrop={(e) => {
-          if (!canDrop) return;
-          e.preventDefault();
-          e.stopPropagation();
-          const pid = e.dataTransfer.getData("participantId");
-          if (pid) onDrop?.(pid, match.id, 2);
-        }}
-      >
-        <div className="flex-1 px-3 py-2 flex items-center gap-2">
-          {p2?.logo ? (
-            <img src={p2.logo} alt="" className="w-5 h-5 rounded object-cover" />
-          ) : (
-            <div className="w-5 h-5 rounded bg-white/5 flex items-center justify-center text-[8px] text-white/30">
-              {p2?.name?.[0] || "?"}
-            </div>
-          )}
-          <span className={`text-xs truncate ${isP2Winner ? "text-green-400 font-bold" : "text-white/70"}`}>
-            {p2?.name || (canDrop ? "Arraste aqui" : "A definir")}
+      <SlotDrop match={match} slot={2} admin={admin} isFinished={isFinished}>
+        <div className={`flex items-center ${!p2 || isBye2 ? "opacity-30" : ""}`}>
+          <div className="flex-1 px-3 py-2 flex items-center gap-2">
+            {p2?.logo ? (
+              <img src={p2.logo} alt="" className="w-5 h-5 rounded object-cover" />
+            ) : (
+              <div className="w-5 h-5 rounded bg-white/5 flex items-center justify-center text-[8px] text-white/30">
+                {p2?.name?.[0] || "?"}
+              </div>
+            )}
+            <span className={`text-xs truncate ${isP2Winner ? "text-green-400 font-bold" : "text-white/70"}`}>
+              {p2?.name || (admin && !isFinished ? "Arraste aqui" : "A definir")}
+            </span>
+            {isP2Winner && <span className="text-green-400 text-[10px]">&#9654;</span>}
+          </div>
+          <span className={`text-xs font-bold px-2 ${isP2Winner ? "text-green-400" : "text-white/30"}`}>
+            {match.score2 ?? (isBye2 || !p2 ? "-" : "")}
           </span>
-          {isP2Winner && <span className="text-green-400 text-[10px]">&#9654;</span>}
         </div>
-        <span className={`text-xs font-bold px-2 ${isP2Winner ? "text-green-400" : "text-white/30"}`}>
-          {match.score2 ?? (isBye2 || !p2 ? "-" : "")}
-        </span>
-      </div>
+      </SlotDrop>
     </div>
   );
 }
@@ -229,7 +261,7 @@ export function BracketView({ championship, onMatchClick, admin, onDrop }: Brack
               <div className="flex flex-col justify-around flex-1 gap-4 px-2" style={{ gap: `${ri * 24 + 16}px` }}>
                 {round.matches.map((match) => (
                   <div key={match.id} className="w-44 shrink-0">
-                    <MatchCard match={match} onMatchClick={onMatchClick} admin={admin} onDrop={onDrop} />
+                    <MatchCard match={match} onMatchClick={onMatchClick} admin={admin} />
                   </div>
                 ))}
               </div>
@@ -315,7 +347,7 @@ export function BracketViewMobile({ championship, onMatchClick, admin, onDrop }:
           </div>
           <div className="space-y-3">
             {round.matches.map((match) => (
-              <MatchCard key={match.id} match={match} onMatchClick={onMatchClick} admin={admin} onDrop={onDrop} />
+              <MatchCard key={match.id} match={match} onMatchClick={onMatchClick} admin={admin} />
             ))}
           </div>
         </div>

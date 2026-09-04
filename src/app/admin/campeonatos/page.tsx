@@ -54,6 +54,15 @@ export default function AdminCampeonatos() {
 
   useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail) handleDrop(detail.participantId, detail.matchId, detail.slot);
+    };
+    window.addEventListener("bracket-drop", handler);
+    return () => window.removeEventListener("bracket-drop", handler);
+  }, [selected]);
+
   const save = async (champ: Championship) => {
     const res = await fetch("/api/championships", {
       method: "PUT",
