@@ -175,7 +175,7 @@ export default function AdminJogadores() {
                   <input type="text" value={editContact.ff_id} onChange={(e) => setEditContact(p => ({ ...p, ff_id: e.target.value }))} className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="123456789" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-white/40 uppercase mb-1">Pontos</label>
+                  <label className="block text-xs font-bold text-white/40 uppercase mb-1">Pontos Atuais da Guerras de Guildas</label>
                   <input type="number" value={editing.points} onChange={(e) => setEditing(p => p ? { ...p, points: Number(e.target.value) } : p)} className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" />
                 </div>
               </div>
@@ -265,7 +265,7 @@ export default function AdminJogadores() {
               <thead><tr className="border-b border-white/5">
                 <th className="text-left text-xs text-white/40 uppercase px-4 py-3">Jogador</th>
                 <th className="text-center text-xs text-white/40 uppercase px-4 py-3">Status</th>
-                <th className="text-right text-xs text-white/40 uppercase px-4 py-3">Pontos</th>
+                <th className="text-right text-xs text-white/40 uppercase px-4 py-3">Pontos GG</th>
                 <th className="text-left text-xs text-white/40 uppercase px-4 py-3">WhatsApp</th>
                 <th className="text-center text-xs text-white/40 uppercase px-4 py-3">Acoes</th>
               </tr></thead>

@@ -115,7 +115,7 @@ export default function RecrutamentoPage() {
               { name: "age", label: "Idade", type: "number", required: true, sm: false },
               { name: "ffId", label: "ID do Free Fire", type: "text", required: true, sm: false },
               { name: "email", label: "Email", type: "email", required: true, sm: false },
-              { name: "points", label: "Pontos atuais", type: "number", required: false, sm: false },
+              { name: "points", label: "Pontos Atuais da Guerras de Guildas", type: "number", required: false, sm: false },
               { name: "experience", label: "Experiência", type: "select", required: false, sm: false },
               { name: "contact", label: "WhatsApp / Discord", type: "text", required: true, sm: true },
             ].map((field) => (
