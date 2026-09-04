@@ -8,13 +8,14 @@ interface Player {
   points: number; bio: string; joined_at: string; avatar: string;
 }
 
-interface ContactInfo { whatsapp: string; ff_id: string; age: number; experience: string; }
+interface ContactInfo { whatsapp: string; ff_id: string; age: number; experience: string; email: string; roles: string[]; }
 
-const CONTACTS_KEY = "tpi_player_contacts";
-
-function getContacts(): Record<string, ContactInfo> {
-  if (typeof window === "undefined") return {};
-  try { return JSON.parse(localStorage.getItem(CONTACTS_KEY) || "{}"); } catch { return {}; }
+async function fetchContacts(): Promise<Record<string, ContactInfo>> {
+  try {
+    const res = await fetch("/api/player-contacts", { cache: "no-store" });
+    const data = await res.json();
+    return data || {};
+  } catch { return {}; }
 }
 
 const emptyPlayer: Player = {
@@ -32,12 +33,18 @@ export default function AdminJogadores() {
   const [toast, setToast] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const load = () => {
-    fetch("/api/players", { cache: "no-store" }).then((r) => r.json()).then((d) => {
-      setPlayers(d);
-      setContacts(getContacts());
+  const load = async () => {
+    try {
+      const [playersRes, contactsData] = await Promise.all([
+        fetch("/api/players", { cache: "no-store" }),
+        fetchContacts(),
+      ]);
+      const playersData = await playersRes.json();
+      setPlayers(playersData);
+      setContacts(contactsData);
+    } finally {
       setLoading(false);
-    });
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -48,9 +55,11 @@ export default function AdminJogadores() {
     const method = isNew ? "POST" : "PUT";
     const body = isNew ? { ...editing, id: undefined } : editing;
     await fetch("/api/players", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const allContacts = getContacts();
-    allContacts[editing.id] = { ...allContacts[editing.id], whatsapp: editWhatsapp };
-    localStorage.setItem(CONTACTS_KEY, JSON.stringify(allContacts));
+    await fetch("/api/player-contacts", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId: editing.id, data: { whatsapp: editWhatsapp } }),
+    });
     setShowForm(false);
     setEditing(null);
     setToast(isNew ? "Jogador criado!" : "Jogador salvo!");
@@ -64,9 +73,7 @@ export default function AdminJogadores() {
   const confirmRemove = async () => {
     if (!confirmDelete) return;
     await fetch("/api/players", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: confirmDelete }) });
-    const allContacts = getContacts();
-    delete allContacts[confirmDelete];
-    localStorage.setItem(CONTACTS_KEY, JSON.stringify(allContacts));
+    await fetch(`/api/player-contacts?playerId=${confirmDelete}`, { method: "DELETE" });
     setConfirmDelete(null);
     setToast("Jogador excluído!");
     load();

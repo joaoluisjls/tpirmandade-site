@@ -78,9 +78,11 @@ export default function AdminPedidos() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Erro ao criar jogador");
 
-      const contacts = JSON.parse(localStorage.getItem("tpi_player_contacts") || "{}");
-      contacts[playerId] = { whatsapp: req.contact, ff_id: req.ff_id, age: req.age, experience: req.experience, email: req.email, roles: req.roles || [] };
-      localStorage.setItem("tpi_player_contacts", JSON.stringify(contacts));
+      await fetch("/api/player-contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId, data: { whatsapp: req.contact, ff_id: req.ff_id, age: req.age, experience: req.experience, email: req.email, roles: req.roles || [] } }),
+      });
 
       await fetch("/api/recruitment-requests", {
         method: "PUT",
