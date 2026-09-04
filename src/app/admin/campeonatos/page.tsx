@@ -211,10 +211,43 @@ export default function AdminCampeonatos() {
     if (!selected || !selected.groups) return;
     const advancers = advanceFromGroups(selected.groups);
     if (advancers.length < 2) { setToast("Nao ha times suficientes para o chaveamento"); return; }
+
     const matches = generateBracketEmpty(advancers.length);
+    const size = Math.pow(2, Math.ceil(Math.log2(advancers.length)));
+    const seeded = [...advancers];
+    while (seeded.length < size) {
+      seeded.push({ id: `bye_${seeded.length}`, name: "BYE", logo: "" });
+    }
+    const pairs: [number, number][] = [];
+    for (let i = 0; i < size / 2; i++) { pairs.push([i, size - 1 - i]); }
+
+    for (const match of matches) {
+      if (match.round !== 0) continue;
+      const [topIdx, bottomIdx] = pairs[match.position] || [0, 0];
+      const top = seeded[topIdx] || null;
+      const bottom = seeded[bottomIdx] || null;
+      const topIsBye = top?.name === "BYE";
+      const bottomIsBye = bottom?.name === "BYE";
+      if (topIsBye && bottomIsBye) { match.participant1 = null; match.participant2 = null; }
+      else if (topIsBye) { match.participant1 = null; match.participant2 = bottom; match.winner = bottom?.id || null; match.status = "finished"; }
+      else if (bottomIsBye) { match.participant1 = top; match.participant2 = null; match.winner = top?.id || null; match.status = "finished"; }
+      else { match.participant1 = top; match.participant2 = bottom; }
+    }
+
+    for (const match of matches) {
+      if (match.winner && match.nextMatchId) {
+        const nextMatch = matches.find((mm) => mm.id === match.nextMatchId);
+        if (nextMatch) {
+          const wp = [match.participant1, match.participant2].find((p) => p?.id === match.winner);
+          if (match.nextSlot === 1) nextMatch.participant1 = wp || null;
+          else nextMatch.participant2 = wp || null;
+        }
+      }
+    }
+
     const updated = { ...selected, matches } as any;
     await save(updated);
-    setToast("Chaveamento gerado! Arraste os participantes para os slots.");
+    setToast("Chaveamento gerado e preenchido automaticamente!");
     const fresh = await reloadAndFind(selected.id);
     if (fresh) setSelected(fresh);
     await load();
@@ -257,6 +290,46 @@ export default function AdminCampeonatos() {
           gm.score1 = Number(matchScore1);
           gm.score2 = Number(matchScore2);
           gm.status = "finished";
+        }
+      }
+
+      const allGroupsFinished = updated.groups.every((g: Group) =>
+        g.matches.every((m: GroupMatch) => m.status === "finished")
+      );
+      if (allGroupsFinished && updated.matches.length === 0 && (updated as any).format === "groups") {
+        const advancers = advanceFromGroups(updated.groups);
+        if (advancers.length >= 2) {
+          const matches = generateBracketEmpty(advancers.length);
+          const size = Math.pow(2, Math.ceil(Math.log2(advancers.length)));
+          const seeded = [...advancers];
+          while (seeded.length < size) {
+            seeded.push({ id: `bye_${seeded.length}`, name: "BYE", logo: "" });
+          }
+          const pairs: [number, number][] = [];
+          for (let i = 0; i < size / 2; i++) { pairs.push([i, size - 1 - i]); }
+          for (const m of matches) {
+            if (m.round !== 0) continue;
+            const [topIdx, bottomIdx] = pairs[m.position] || [0, 0];
+            const top = seeded[topIdx] || null;
+            const bottom = seeded[bottomIdx] || null;
+            const topIsBye = top?.name === "BYE";
+            const bottomIsBye = bottom?.name === "BYE";
+            if (topIsBye && bottomIsBye) { m.participant1 = null; m.participant2 = null; }
+            else if (topIsBye) { m.participant1 = null; m.participant2 = bottom; m.winner = bottom?.id || null; m.status = "finished"; }
+            else if (bottomIsBye) { m.participant1 = top; m.participant2 = null; m.winner = top?.id || null; m.status = "finished"; }
+            else { m.participant1 = top; m.participant2 = bottom; }
+          }
+          for (const m of matches) {
+            if (m.winner && m.nextMatchId) {
+              const nextMatch = matches.find((mm) => mm.id === m.nextMatchId);
+              if (nextMatch) {
+                const wp = [m.participant1, m.participant2].find((p) => p?.id === m.winner);
+                if (m.nextSlot === 1) nextMatch.participant1 = wp || null;
+                else nextMatch.participant2 = wp || null;
+              }
+            }
+          }
+          (updated as any).matches = matches;
         }
       }
     }
@@ -563,9 +636,9 @@ export default function AdminCampeonatos() {
                   Iniciar Campeonato
                 </button>
               )}
-              {selected.status === "in_progress" && selected.groups && selected.groups.length > 0 && selected.matches.length === 0 && (
+              {selected.status === "in_progress" && selected.groups && selected.groups.length > 0 && (selected.matches.length === 0 || (selected as any).format === "groups") && (
                 <button onClick={generateBracketFromGroups} className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/80">
-                  Gerar Chave
+                  {selected.matches.length > 0 ? "Regenerar Chave" : "Gerar Chave"}
                 </button>
               )}
               <button onClick={() => startEdit(selected)} className="px-4 py-2 rounded-lg bg-white/5 text-white/40 text-sm hover:bg-white/10">
