@@ -278,6 +278,46 @@ export default function AdminCampeonatos() {
     await load();
   };
 
+  const handleDrop = async (participantId: string, matchId: string, slot: 1 | 2) => {
+    if (!selected) return;
+    const updated = { ...selected } as any;
+    const match = updated.matches.find((m: Match) => m.id === matchId);
+    if (!match) return;
+
+    const participant = updated.participants.find((p: Participant) => p.id === participantId);
+    if (!participant) return;
+
+    if (slot === 1) {
+      if (match.participant2?.id === participantId) return;
+      match.participant1 = participant;
+    } else {
+      if (match.participant1?.id === participantId) return;
+      match.participant2 = participant;
+    }
+
+    match.winner = null;
+    match.score1 = null;
+    match.score2 = null;
+    match.status = "pending";
+
+    if (match.nextMatchId && match.nextSlot) {
+      const nextMatch = updated.matches.find((m: Match) => m.id === match.nextMatchId);
+      if (nextMatch) {
+        if (match.nextSlot === 1) nextMatch.participant1 = null;
+        else nextMatch.participant2 = null;
+        nextMatch.winner = null;
+        nextMatch.score1 = null;
+        nextMatch.score2 = null;
+        nextMatch.status = "pending";
+      }
+    }
+
+    await save(updated);
+    const fresh = await reloadAndFind(selected.id);
+    if (fresh) setSelected(fresh);
+    await load();
+  };
+
   const startNew = () => {
     setForm(emptyForm);
     setView("edit");
@@ -595,10 +635,10 @@ export default function AdminCampeonatos() {
               ) : (
                 <>
                   <div className="hidden sm:block">
-                    <BracketView championship={selected} onMatchClick={openBracketMatch} admin />
+                    <BracketView championship={selected} onMatchClick={openBracketMatch} admin onDrop={handleDrop} />
                   </div>
                   <div className="sm:hidden">
-                    <BracketViewMobile championship={selected} onMatchClick={openBracketMatch} admin />
+                    <BracketViewMobile championship={selected} onMatchClick={openBracketMatch} admin onDrop={handleDrop} />
                   </div>
                 </>
               )}

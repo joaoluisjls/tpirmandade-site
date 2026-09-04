@@ -1,19 +1,46 @@
 "use client";
 
-import { useMemo } from "react";
-import type { Match, Championship } from "@/lib/bracket";
+import { useMemo, useState } from "react";
+import type { Match, Championship, Participant } from "@/lib/bracket";
 import { getRoundName } from "@/lib/bracket";
 
 interface BracketViewProps {
   championship: Championship;
   onMatchClick?: (match: Match) => void;
   admin?: boolean;
+  onDrop?: (participantId: string, matchId: string, slot: 1 | 2) => void;
 }
 
-function MatchCard({ match, onMatchClick, admin }: {
+function DraggableParticipant({ participant, used }: { participant: Participant; used: boolean }) {
+  return (
+    <div
+      draggable={!used}
+      onDragStart={(e) => {
+        e.dataTransfer.setData("participantId", participant.id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs transition-all ${
+        used
+          ? "border-white/5 bg-white/[0.02] opacity-30 cursor-not-allowed"
+          : "border-primary/20 bg-primary/5 hover:border-primary/40 cursor-grab active:cursor-grabbing"
+      }`}
+    >
+      {participant.logo ? (
+        <img src={participant.logo} alt="" className="w-5 h-5 rounded object-cover" />
+      ) : (
+        <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-[8px] text-white/40 font-bold">{participant.name[0]}</div>
+      )}
+      <span className="text-white/70 truncate">{participant.name}</span>
+      {!used && <span className="text-primary/40 ml-auto">&#9776;</span>}
+    </div>
+  );
+}
+
+function MatchCard({ match, onMatchClick, admin, onDrop }: {
   match: Match;
   onMatchClick?: (match: Match) => void;
   admin?: boolean;
+  onDrop?: (participantId: string, matchId: string, slot: 1 | 2) => void;
 }) {
   const p1 = match.participant1;
   const p2 = match.participant2;
@@ -23,6 +50,7 @@ function MatchCard({ match, onMatchClick, admin }: {
   const isFinished = match.status === "finished";
   const isP1Winner = match.winner === p1?.id;
   const isP2Winner = match.winner === p2?.id;
+  const canDrop = admin && !isFinished;
 
   return (
     <div
@@ -36,7 +64,19 @@ function MatchCard({ match, onMatchClick, admin }: {
       <div className="px-3 py-1.5 text-[10px] text-white/20 uppercase tracking-wider border-b border-white/5">
         {match.id.replace("match_", "").replace("_", " ")}
       </div>
-      <div className={`flex items-center ${!p1 || isBye1 ? "opacity-30" : ""}`}>
+
+      {/* Slot 1 */}
+      <div
+        className={`flex items-center ${!p1 || isBye1 ? "opacity-30" : ""} ${canDrop ? "min-h-[36px]" : ""}`}
+        onDragOver={(e) => { if (canDrop) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } }}
+        onDrop={(e) => {
+          if (!canDrop) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const pid = e.dataTransfer.getData("participantId");
+          if (pid) onDrop?.(pid, match.id, 1);
+        }}
+      >
         <div className="flex-1 px-3 py-2 flex items-center gap-2">
           {p1?.logo ? (
             <img src={p1.logo} alt="" className="w-5 h-5 rounded object-cover" />
@@ -46,7 +86,7 @@ function MatchCard({ match, onMatchClick, admin }: {
             </div>
           )}
           <span className={`text-xs truncate ${isP1Winner ? "text-green-400 font-bold" : "text-white/70"}`}>
-            {p1?.name || "A definir"}
+            {p1?.name || (canDrop ? "Arraste aqui" : "A definir")}
           </span>
           {isP1Winner && <span className="text-green-400 text-[10px]">&#9654;</span>}
         </div>
@@ -54,8 +94,21 @@ function MatchCard({ match, onMatchClick, admin }: {
           {match.score1 ?? (isBye1 || !p1 ? "-" : "")}
         </span>
       </div>
+
       <div className="border-t border-white/5" />
-      <div className={`flex items-center ${!p2 || isBye2 ? "opacity-30" : ""}`}>
+
+      {/* Slot 2 */}
+      <div
+        className={`flex items-center ${!p2 || isBye2 ? "opacity-30" : ""} ${canDrop ? "min-h-[36px]" : ""}`}
+        onDragOver={(e) => { if (canDrop) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } }}
+        onDrop={(e) => {
+          if (!canDrop) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const pid = e.dataTransfer.getData("participantId");
+          if (pid) onDrop?.(pid, match.id, 2);
+        }}
+      >
         <div className="flex-1 px-3 py-2 flex items-center gap-2">
           {p2?.logo ? (
             <img src={p2.logo} alt="" className="w-5 h-5 rounded object-cover" />
@@ -65,7 +118,7 @@ function MatchCard({ match, onMatchClick, admin }: {
             </div>
           )}
           <span className={`text-xs truncate ${isP2Winner ? "text-green-400 font-bold" : "text-white/70"}`}>
-            {p2?.name || "A definir"}
+            {p2?.name || (canDrop ? "Arraste aqui" : "A definir")}
           </span>
           {isP2Winner && <span className="text-green-400 text-[10px]">&#9654;</span>}
         </div>
@@ -77,7 +130,7 @@ function MatchCard({ match, onMatchClick, admin }: {
   );
 }
 
-export function BracketView({ championship, onMatchClick, admin }: BracketViewProps) {
+export function BracketView({ championship, onMatchClick, admin, onDrop }: BracketViewProps) {
   const rounds = useMemo(() => {
     const roundMap: Record<number, Match[]> = {};
     for (const match of championship.matches) {
@@ -94,6 +147,19 @@ export function BracketView({ championship, onMatchClick, admin }: BracketViewPr
     }
     return result;
   }, [championship.matches]);
+
+  const usedParticipantIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const m of championship.matches) {
+      if (m.participant1) ids.add(m.participant1.id);
+      if (m.participant2) ids.add(m.participant2.id);
+    }
+    return ids;
+  }, [championship.matches]);
+
+  const availableParticipants = useMemo(() => {
+    return championship.participants.filter((p) => !usedParticipantIds.has(p.id));
+  }, [championship.participants, usedParticipantIds]);
 
   if (championship.matches.length === 0) {
     return (
@@ -126,28 +192,56 @@ export function BracketView({ championship, onMatchClick, admin }: BracketViewPr
   }
 
   return (
-    <div className="overflow-x-auto pb-4">
-      <div className="flex gap-0 items-stretch min-w-max">
-        {rounds.map((round, ri) => (
-          <div key={ri} className="flex flex-col items-center">
-            <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3 px-4 text-center whitespace-nowrap">
-              {round.name}
+    <div className="flex gap-4">
+      {admin && availableParticipants.length > 0 && (
+        <div className="shrink-0 w-48 hidden lg:block">
+          <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2 px-1">
+            Disponiveis ({availableParticipants.length})
+          </div>
+          <div className="space-y-1 sticky top-4">
+            {availableParticipants.map((p) => (
+              <DraggableParticipant key={p.id} participant={p} used={usedParticipantIds.has(p.id)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-x-auto pb-4 flex-1">
+        {admin && availableParticipants.length > 0 && (
+          <div className="mb-4 lg:hidden">
+            <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">
+              Arraste para os slots:
             </div>
-            <div className="flex flex-col justify-around flex-1 gap-4 px-2" style={{ gap: `${ri * 24 + 16}px` }}>
-              {round.matches.map((match) => (
-                <div key={match.id} className="w-44 shrink-0">
-                  <MatchCard match={match} onMatchClick={onMatchClick} admin={admin} />
-                </div>
+            <div className="flex flex-wrap gap-1">
+              {availableParticipants.map((p) => (
+                <DraggableParticipant key={p.id} participant={p} used={usedParticipantIds.has(p.id)} />
               ))}
             </div>
           </div>
-        ))}
+        )}
+
+        <div className="flex gap-0 items-stretch min-w-max">
+          {rounds.map((round, ri) => (
+            <div key={ri} className="flex flex-col items-center">
+              <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3 px-4 text-center whitespace-nowrap">
+                {round.name}
+              </div>
+              <div className="flex flex-col justify-around flex-1 gap-4 px-2" style={{ gap: `${ri * 24 + 16}px` }}>
+                {round.matches.map((match) => (
+                  <div key={match.id} className="w-44 shrink-0">
+                    <MatchCard match={match} onMatchClick={onMatchClick} admin={admin} onDrop={onDrop} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-export function BracketViewMobile({ championship, onMatchClick, admin }: BracketViewProps) {
+export function BracketViewMobile({ championship, onMatchClick, admin, onDrop }: BracketViewProps) {
   const rounds = useMemo(() => {
     const roundMap: Record<number, Match[]> = {};
     for (const match of championship.matches) {
@@ -164,6 +258,19 @@ export function BracketViewMobile({ championship, onMatchClick, admin }: Bracket
     }
     return result;
   }, [championship.matches]);
+
+  const usedParticipantIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const m of championship.matches) {
+      if (m.participant1) ids.add(m.participant1.id);
+      if (m.participant2) ids.add(m.participant2.id);
+    }
+    return ids;
+  }, [championship.matches]);
+
+  const availableParticipants = useMemo(() => {
+    return championship.participants.filter((p) => !usedParticipantIds.has(p.id));
+  }, [championship.participants, usedParticipantIds]);
 
   if (championship.matches.length === 0) {
     return (
@@ -188,6 +295,19 @@ export function BracketViewMobile({ championship, onMatchClick, admin }: Bracket
 
   return (
     <div className="space-y-6">
+      {admin && availableParticipants.length > 0 && (
+        <div>
+          <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-2">
+            Arraste para os slots:
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {availableParticipants.map((p) => (
+              <DraggableParticipant key={p.id} participant={p} used={usedParticipantIds.has(p.id)} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {rounds.map((round, ri) => (
         <div key={ri}>
           <div className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 text-center">
@@ -195,7 +315,7 @@ export function BracketViewMobile({ championship, onMatchClick, admin }: Bracket
           </div>
           <div className="space-y-3">
             {round.matches.map((match) => (
-              <MatchCard key={match.id} match={match} onMatchClick={onMatchClick} admin={admin} />
+              <MatchCard key={match.id} match={match} onMatchClick={onMatchClick} admin={admin} onDrop={onDrop} />
             ))}
           </div>
         </div>
