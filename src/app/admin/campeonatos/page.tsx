@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { Championship, Participant, Match, Group, GroupMatch } from "@/lib/bracket";
-import { generateBracket, advanceWinner, resetMatch, getChampion, generateGroups, advanceFromGroups } from "@/lib/bracket";
+import { generateBracketEmpty, advanceWinner, resetMatch, getChampion, generateGroups, advanceFromGroups } from "@/lib/bracket";
 import { BracketView, BracketViewMobile } from "@/components/BracketView";
 import { GroupTable } from "@/components/GroupTable";
 import { Toast, ConfirmModal } from "@/components/ui";
@@ -149,8 +149,10 @@ export default function AdminCampeonatos() {
     setConfirm({ msg: `Remover "${selected.participants[idx].name}"?`, onYes: async () => {
       const updated = { ...selected };
       updated.participants = updated.participants.filter((_, i) => i !== idx);
-      updated.matches = generateBracket(updated.participants);
-      updated.champion = getChampion(updated.matches);
+      if (updated.status === "in_progress" && (!updated.groups || updated.groups.length === 0)) {
+        updated.matches = generateBracketEmpty(updated.participants.length);
+      }
+      updated.champion = null;
       await save(updated);
       const fresh = await reloadAndFind(selected.id);
       if (fresh) setSelected(fresh);
@@ -190,14 +192,15 @@ export default function AdminCampeonatos() {
       await save(updated);
       setToast("Campeonato iniciado com grupos!");
     } else {
+      const matches = generateBracketEmpty(selected.participants.length);
       const updated = {
         ...selected,
         status: "in_progress" as const,
-        matches: generateBracket(selected.participants),
+        matches,
         groups: [],
       };
       await save(updated);
-      setToast("Campeonato iniciado!");
+      setToast("Campeonato iniciado! Arraste os participantes para os slots.");
     }
     const fresh = await reloadAndFind(selected.id);
     if (fresh) setSelected(fresh);
@@ -208,9 +211,10 @@ export default function AdminCampeonatos() {
     if (!selected || !selected.groups) return;
     const advancers = advanceFromGroups(selected.groups);
     if (advancers.length < 2) { setToast("Nao ha times suficientes para o chaveamento"); return; }
-    const updated = { ...selected, matches: generateBracket(advancers) } as any;
+    const matches = generateBracketEmpty(advancers.length);
+    const updated = { ...selected, matches } as any;
     await save(updated);
-    setToast("Chaveamento gerado!");
+    setToast("Chaveamento gerado! Arraste os participantes para os slots.");
     const fresh = await reloadAndFind(selected.id);
     if (fresh) setSelected(fresh);
     await load();

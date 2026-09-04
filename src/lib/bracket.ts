@@ -71,10 +71,6 @@ function nextPowerOf2(n: number): number {
   return p;
 }
 
-function log2(n: number): number {
-  return Math.ceil(Math.log2(Math.max(n, 1)));
-}
-
 export function getRoundName(roundIndex: number, totalRounds: number): string {
   const roundsFromFinal = totalRounds - 1 - roundIndex;
   if (roundsFromFinal === 0) return "FINAL";
@@ -103,60 +99,28 @@ export function generateGroupMatches(participants: Participant[]): GroupMatch[] 
 
 export function calculateGroupStandings(group: Group): GroupStanding[] {
   const map = new Map<string, GroupStanding>();
-
   for (const p of group.participants) {
     map.set(p.id, {
-      participant: p,
-      played: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      goalsFor: 0,
-      goalsAgainst: 0,
-      goalDiff: 0,
-      points: 0,
+      participant: p, played: 0, wins: 0, draws: 0, losses: 0,
+      goalsFor: 0, goalsAgainst: 0, goalDiff: 0, points: 0,
     });
   }
-
   for (const m of group.matches) {
     if (m.status !== "finished" || m.score1 === null || m.score2 === null) continue;
     if (!m.participant1 || !m.participant2) continue;
-
     const s1 = map.get(m.participant1.id);
     const s2 = map.get(m.participant2.id);
     if (!s1 || !s2) continue;
-
-    s1.played++;
-    s2.played++;
-    s1.goalsFor += m.score1;
-    s1.goalsAgainst += m.score2;
-    s2.goalsFor += m.score2;
-    s2.goalsAgainst += m.score1;
-
-    if (m.score1 > m.score2) {
-      s1.wins++;
-      s1.points += 3;
-      s2.losses++;
-    } else if (m.score1 < m.score2) {
-      s2.wins++;
-      s2.points += 3;
-      s1.losses++;
-    } else {
-      s1.draws++;
-      s2.draws++;
-      s1.points += 1;
-      s2.points += 1;
-    }
+    s1.played++; s2.played++;
+    s1.goalsFor += m.score1; s1.goalsAgainst += m.score2;
+    s2.goalsFor += m.score2; s2.goalsAgainst += m.score1;
+    if (m.score1 > m.score2) { s1.wins++; s1.points += 3; s2.losses++; }
+    else if (m.score1 < m.score2) { s2.wins++; s2.points += 3; s1.losses++; }
+    else { s1.draws++; s2.draws++; s1.points += 1; s2.points += 1; }
   }
-
   const standings = Array.from(map.values());
   standings.forEach((s) => { s.goalDiff = s.goalsFor - s.goalsAgainst; });
-  standings.sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
-    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
-    return a.participant.name.localeCompare(b.participant.name);
-  });
+  standings.sort((a, b) => b.points - a.points || b.goalDiff - a.goalDiff || b.goalsFor - a.goalsFor);
   return standings;
 }
 
@@ -174,26 +138,47 @@ export function advanceFromGroups(groups: Group[]): Participant[] {
 export function generateGroups(participants: Participant[], groupCount: number): Group[] {
   const groups: Group[] = [];
   const shuffled = [...participants].sort(() => Math.random() - 0.5);
-
   for (let i = 0; i < groupCount; i++) {
-    groups.push({
-      id: `group_${i}`,
-      name: String.fromCharCode(65 + i),
-      participants: [],
-      matches: [],
-      advanceCount: 2,
+    groups.push({ id: `group_${i}`, name: String.fromCharCode(65 + i), participants: [], matches: [], advanceCount: 2 });
+  }
+  shuffled.forEach((p, idx) => { groups[idx % groupCount].participants.push(p); });
+  for (const group of groups) { group.matches = generateGroupMatches(group.participants); }
+  return groups;
+}
+
+export function generateBracketEmpty(totalSlots: number): Match[] {
+  if (totalSlots <= 1) return [];
+  const size = nextPowerOf2(totalSlots);
+  const firstRoundMatches = size / 2;
+  const totalRounds = Math.ceil(Math.log2(size));
+  const matches: Match[] = [];
+
+  for (let m = 0; m < firstRoundMatches; m++) {
+    const nextMatchId = totalRounds > 1 ? `match_r1_p${Math.floor(m / 2)}` : null;
+    const nextSlot = totalRounds > 1 ? (m % 2 === 0 ? 1 as const : 2 as const) : null;
+    matches.push({
+      id: `match_r0_p${m}`, round: 0, position: m,
+      participant1: null, participant2: null,
+      score1: null, score2: null, winner: null,
+      status: "pending", nextMatchId, nextSlot,
     });
   }
 
-  shuffled.forEach((p, idx) => {
-    groups[idx % groupCount].participants.push(p);
-  });
-
-  for (const group of groups) {
-    group.matches = generateGroupMatches(group.participants);
+  for (let r = 1; r < totalRounds; r++) {
+    const matchesInRound = size / Math.pow(2, r + 1);
+    for (let m = 0; m < matchesInRound; m++) {
+      matches.push({
+        id: `match_r${r}_p${m}`, round: r, position: m,
+        participant1: null, participant2: null,
+        score1: null, score2: null, winner: null,
+        status: "pending",
+        nextMatchId: r < totalRounds - 1 ? `match_r${r + 1}_p${Math.floor(m / 2)}` : null,
+        nextSlot: r < totalRounds - 1 ? (m % 2 === 0 ? 1 as const : 2 as const) : null,
+      });
+    }
   }
 
-  return groups;
+  return matches;
 }
 
 export function generateBracket(participants: Participant[]): Match[] {
@@ -201,102 +186,35 @@ export function generateBracket(participants: Participant[]): Match[] {
   if (n === 0) return [];
   if (n === 1) {
     return [{
-      id: `match_final_0`,
-      round: 0,
-      position: 0,
-      participant1: participants[0],
-      participant2: null,
-      score1: null,
-      score2: null,
-      winner: participants[0].id,
-      status: "finished",
-      nextMatchId: null,
-      nextSlot: null,
+      id: `match_final_0`, round: 0, position: 0,
+      participant1: participants[0], participant2: null,
+      score1: null, score2: null, winner: participants[0].id,
+      status: "finished", nextMatchId: null, nextSlot: null,
     }];
   }
-
+  const matches = generateBracketEmpty(n);
   const size = nextPowerOf2(n);
-  const totalRounds = log2(size);
-  const firstRoundMatches = size / 2;
-
   const seeded = [...participants];
   while (seeded.length < size) {
     seeded.push({ id: `bye_${seeded.length}`, name: "BYE", logo: "" });
   }
-
   const seeds = seeded.map((p, i) => ({ participant: p, seed: i + 1 }));
   const sortedSeeds = [...seeds].sort((a, b) => a.seed - b.seed);
-
   const pairs: [number, number][] = [];
-  for (let i = 0; i < size / 2; i++) {
-    pairs.push([i, size - 1 - i]);
-  }
+  for (let i = 0; i < size / 2; i++) { pairs.push([i, size - 1 - i]); }
 
-  const matches: Match[] = [];
-  const roundMatches: Match[][] = [];
-
-  for (let r = 0; r < totalRounds; r++) {
-    const matchesInRound = size / Math.pow(2, r + 1);
-    const roundMatchList: Match[] = [];
-    for (let m = 0; m < matchesInRound; m++) {
-      const match: Match = {
-        id: `match_r${r}_p${m}`,
-        round: r,
-        position: m,
-        participant1: null,
-        participant2: null,
-        score1: null,
-        score2: null,
-        winner: null,
-        status: "pending",
-        nextMatchId: null,
-        nextSlot: null,
-      };
-      roundMatchList.push(match);
-      matches.push(match);
-    }
-    roundMatches.push(roundMatchList);
-  }
-
-  for (let m = 0; m < firstRoundMatches; m++) {
-    const [topIdx, bottomIdx] = pairs[m];
+  for (let m = 0; m < matches.length; m++) {
+    const match = matches[m];
+    if (match.round !== 0) continue;
+    const [topIdx, bottomIdx] = pairs[m] || [0, 0];
     const top = sortedSeeds[topIdx]?.participant || null;
     const bottom = sortedSeeds[bottomIdx]?.participant || null;
-    const match = roundMatches[0][m];
     const topIsBye = top?.name === "BYE";
     const bottomIsBye = bottom?.name === "BYE";
-
-    if (topIsBye && bottomIsBye) {
-      match.participant1 = null;
-      match.participant2 = null;
-    } else if (topIsBye) {
-      match.participant1 = null;
-      match.participant2 = bottom;
-      match.winner = bottom?.id || null;
-      match.status = "finished";
-    } else if (bottomIsBye) {
-      match.participant1 = top;
-      match.participant2 = null;
-      match.winner = top?.id || null;
-      match.status = "finished";
-    } else {
-      match.participant1 = top;
-      match.participant2 = bottom;
-    }
-
-    if (totalRounds > 1) {
-      match.nextMatchId = `match_r1_p${Math.floor(m / 2)}`;
-      match.nextSlot = m % 2 === 0 ? 1 : 2;
-    }
-  }
-
-  for (let r = 1; r < totalRounds; r++) {
-    for (let m = 0; m < roundMatches[r].length; m++) {
-      if (r < totalRounds - 1) {
-        roundMatches[r][m].nextMatchId = `match_r${r + 1}_p${Math.floor(m / 2)}`;
-        roundMatches[r][m].nextSlot = m % 2 === 0 ? 1 : 2;
-      }
-    }
+    if (topIsBye && bottomIsBye) { match.participant1 = null; match.participant2 = null; }
+    else if (topIsBye) { match.participant1 = null; match.participant2 = bottom; match.winner = bottom?.id || null; match.status = "finished"; }
+    else if (bottomIsBye) { match.participant1 = top; match.participant2 = null; match.winner = top?.id || null; match.status = "finished"; }
+    else { match.participant1 = top; match.participant2 = bottom; }
   }
 
   for (const match of matches) {
@@ -321,8 +239,25 @@ export function advanceWinner(matches: Match[], matchId: string, winnerId: strin
   match.winner = winnerId;
   match.status = "finished";
 
-  if (match.nextMatchId && match.nextSlot) {
-    const nextMatch = updated.find((m) => m.id === match.nextMatchId);
+  if (match.nextMatchId) {
+    let nextMatch = updated.find((m) => m.id === match.nextMatchId);
+    if (!nextMatch && match.round === 0) {
+      const nextRound = 1;
+      const nextPos = Math.floor(match.position / 2);
+      const nextId = `match_r${nextRound}_p${nextPos}`;
+      const size = nextPowerOf2(updated.filter((m) => m.round === 0).length * 2);
+      const totalRounds = Math.ceil(Math.log2(size));
+      const newMatch: Match = {
+        id: nextId, round: nextRound, position: nextPos,
+        participant1: null, participant2: null,
+        score1: null, score2: null, winner: null,
+        status: "pending",
+        nextMatchId: nextRound < totalRounds - 1 ? `match_r${nextRound + 1}_p${Math.floor(nextPos / 2)}` : null,
+        nextSlot: nextRound < totalRounds - 1 ? (nextPos % 2 === 0 ? 1 as const : 2 as const) : null,
+      };
+      updated.push(newMatch);
+      nextMatch = newMatch;
+    }
     if (nextMatch) {
       const wp = [match.participant1, match.participant2].find((p) => p?.id === winnerId);
       if (match.nextSlot === 1) nextMatch.participant1 = wp || null;
@@ -344,7 +279,7 @@ export function resetMatch(matches: Match[], matchId: string): Match[] {
   match.score2 = null;
   match.status = "pending";
 
-  if (match.nextMatchId && match.nextSlot) {
+  if (match.nextMatchId) {
     const nextMatch = updated.find((m) => m.id === match.nextMatchId);
     if (nextMatch) {
       if (match.nextSlot === 1) nextMatch.participant1 = null;
@@ -372,8 +307,9 @@ export function resetMatch(matches: Match[], matchId: string): Match[] {
 }
 
 export function getChampion(matches: Match[]): Participant | null {
-  const lastRound = matches.reduce((max, m) => Math.max(max, m.round), 0);
-  const finalMatch = matches.find((m) => m.round === lastRound);
+  if (matches.length === 0) return null;
+  const maxRound = Math.max(...matches.map((m) => m.round));
+  const finalMatch = matches.find((m) => m.round === maxRound);
   if (!finalMatch?.winner) return null;
   return [finalMatch.participant1, finalMatch.participant2].find(
     (p) => p?.id === finalMatch.winner
