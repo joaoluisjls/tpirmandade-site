@@ -16,7 +16,15 @@ interface Request {
   status: string;
   created_at: string;
   photo: string | null;
+  roles?: string[];
 }
+
+const ROLE_LABELS: Record<string, string> = {
+  rush: "Full GasRush",
+  suporte: "Suporte",
+  capitao: "Capitao",
+  granadeiro: "Granadeiro",
+};
 
 export default function AdminPedidos() {
   const [requests, setRequests] = useState<Request[]>([]);
@@ -71,7 +79,7 @@ export default function AdminPedidos() {
       if (!res.ok) throw new Error(result.error || "Erro ao criar jogador");
 
       const contacts = JSON.parse(localStorage.getItem("tpi_player_contacts") || "{}");
-      contacts[playerId] = { whatsapp: req.contact, ff_id: req.ff_id, age: req.age, experience: req.experience, email: req.email };
+      contacts[playerId] = { whatsapp: req.contact, ff_id: req.ff_id, age: req.age, experience: req.experience, email: req.email, roles: req.roles || [] };
       localStorage.setItem("tpi_player_contacts", JSON.stringify(contacts));
 
       await fetch("/api/recruitment-requests", {
@@ -186,6 +194,13 @@ export default function AdminPedidos() {
                       <div><span className="text-white/30">Email:</span> <span className="text-blue-400">{req.email || "—"}</span></div>
                       <div><span className="text-white/30">WhatsApp:</span> <span className="text-green-400">{req.contact || "—"}</span></div>
                     </div>
+                    {req.roles && req.roles.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {req.roles.map((r) => (
+                          <span key={r} className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold">{ROLE_LABELS[r] || r}</span>
+                        ))}
+                      </div>
+                    )}
                     <div className="text-xs text-white/50 italic">&ldquo;{req.reason}&rdquo;</div>
                   </div>
                   <div className="flex gap-2 shrink-0 flex-wrap justify-end">

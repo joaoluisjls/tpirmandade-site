@@ -5,6 +5,13 @@ import { useState, useEffect, useRef } from "react";
 const APPROVAL_KEY = "tpi_user_approved";
 const EMAIL_KEY = "tpi_user_email";
 
+const ROLE_OPTIONS = [
+  { id: "rush", label: "Full GasRush" },
+  { id: "suporte", label: "Suporte" },
+  { id: "capitao", label: "Capitao" },
+  { id: "granadeiro", label: "Granadeiro" },
+];
+
 export function Gate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"loading" | "gate" | "pending" | "approved">("loading");
   const [recruiting, setRecruiting] = useState(false);
@@ -12,6 +19,7 @@ export function Gate({ children }: { children: React.ReactNode }) {
   const [photo, setPhoto] = useState("");
   const [photoName, setPhotoName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [roles, setRoles] = useState<string[]>([]);
   const [form, setForm] = useState({
     email: "",
     nick: "",
@@ -72,6 +80,14 @@ export function Gate({ children }: { children: React.ReactNode }) {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const toggleRole = (id: string) => {
+    setRoles((prev) => {
+      if (prev.includes(id)) return prev.filter((r) => r !== id);
+      if (prev.length >= 3) return prev;
+      return [...prev, id];
+    });
+  };
+
   const handleRecruit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.email || !form.nick || !form.name || !form.ffId) {
@@ -97,6 +113,7 @@ export function Gate({ children }: { children: React.ReactNode }) {
           contact: form.whatsapp,
           email: form.email,
           photo: photo || null,
+          roles,
         }),
       });
       const data = await res.json();
@@ -214,7 +231,22 @@ export function Gate({ children }: { children: React.ReactNode }) {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-white/40 uppercase mb-1">Foto de Perfil</label>
+              <label className="block text-xs font-bold text-white/40 uppercase mb-2">Funcao no Free Fire (ate 3)</label>
+              <div className="grid grid-cols-2 gap-2">
+                {ROLE_OPTIONS.map((r) => {
+                  const selected = roles.includes(r.id);
+                  return (
+                    <button key={r.id} type="button" onClick={() => toggleRole(r.id)}
+                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${selected ? "bg-primary/20 border-primary/50 text-primary" : "bg-white/5 border-white/10 text-white/50 hover:border-white/20"}`}>
+                      {r.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {roles.length > 0 && <p className="text-[10px] text-white/20 mt-1">{roles.length}/3 selecionadas</p>}
+            </div>
+
+            <div>
               <div className="flex items-center gap-3">
                 <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" id="gate-photo" />
                 <label htmlFor="gate-photo" className="px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 hover:text-white cursor-pointer transition-colors">

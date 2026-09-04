@@ -2,6 +2,13 @@
 
 import { useState, useRef } from "react";
 
+const ROLE_OPTIONS = [
+  { id: "rush", label: "Full GasRush" },
+  { id: "suporte", label: "Suporte" },
+  { id: "capitao", label: "Capitao" },
+  { id: "granadeiro", label: "Granadeiro" },
+];
+
 const STORAGE_KEY = "tpi_recruitment_requests";
 
 function getRequests() {
@@ -20,6 +27,7 @@ export default function RecrutamentoPage() {
   const [photo, setPhoto] = useState("");
   const [photoName, setPhotoName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [roles, setRoles] = useState<string[]>([]);
   const [form, setForm] = useState({ nick: "", name: "", age: "", ffId: "", email: "", experience: "", reason: "", contact: "", points: "" });
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,6 +59,7 @@ export default function RecrutamentoPage() {
         contact: form.contact,
         email: form.email,
         photo: photo || null,
+        roles,
         status: "pending",
         created_at: new Date().toISOString(),
       };
@@ -66,6 +75,14 @@ export default function RecrutamentoPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const toggleRole = (id: string) => {
+    setRoles((prev) => {
+      if (prev.includes(id)) return prev.filter((r) => r !== id);
+      if (prev.length >= 3) return prev;
+      return [...prev, id];
+    });
   };
 
   if (submitted) {
@@ -116,6 +133,21 @@ export default function RecrutamentoPage() {
                 )}
               </div>
             ))}
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Funcao no Free Fire (ate 3)</label>
+              <div className="grid grid-cols-2 gap-2">
+                {ROLE_OPTIONS.map((r) => {
+                  const selected = roles.includes(r.id);
+                  return (
+                    <button key={r.id} type="button" onClick={() => toggleRole(r.id)}
+                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${selected ? "bg-primary/20 border-primary/50 text-primary" : "bg-white/5 border-white/10 text-white/50 hover:border-white/20"}`}>
+                      {r.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {roles.length > 0 && <p className="text-[10px] text-white/20 mt-1">{roles.length}/3 selecionadas</p>}
+            </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5">Por que quer entrar? *</label>
               <textarea name="reason" value={form.reason} onChange={handleChange} required rows={3} placeholder="Conte-nos por que quer fazer parte..." className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50 resize-none" />
