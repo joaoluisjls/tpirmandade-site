@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import type { Championship } from "@/lib/bracket";
 import { BracketView, BracketViewMobile } from "@/components/BracketView";
+import { GroupTable } from "@/components/GroupTable";
 
 interface War {
   id: string;
@@ -260,14 +261,37 @@ export default function GuerrasPage() {
                   )}
                 </div>
 
+                {selectedChamp.groups && selectedChamp.groups.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-bold text-white mb-4 text-center">FASE DE GRUPOS</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedChamp.groups.map((group) => (
+                        <GroupTable key={group.id} group={group} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="mb-4">
-                  <h3 className="text-lg font-bold text-white mb-4 text-center">CHAVEAMENTO</h3>
-                  <div className="hidden sm:block">
-                    <BracketView championship={selectedChamp} />
-                  </div>
-                  <div className="sm:hidden">
-                    <BracketViewMobile championship={selectedChamp} />
-                  </div>
+                  <h3 className="text-lg font-bold text-white mb-4 text-center">
+                    {selectedChamp.groups && selectedChamp.groups.length > 0 ? "CHAVEAMENTO (MATA-MATA)" : "CHAVEAMENTO"}
+                  </h3>
+                  {selectedChamp.matches && selectedChamp.matches.length > 0 ? (
+                    <>
+                      <div className="hidden sm:block">
+                        <BracketView championship={selectedChamp} />
+                      </div>
+                      <div className="sm:hidden">
+                        <BracketViewMobile championship={selectedChamp} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-white/30 text-sm">
+                      {selectedChamp.groups && selectedChamp.groups.length > 0
+                        ? "Chaveamento sera gerado apos a fase de grupos."
+                        : "Nenhum chaveamento disponivel."}
+                    </div>
+                  )}
                 </div>
 
                 {selectedChamp.participants.length > 0 && (

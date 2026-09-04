@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import type { Championship, Participant, Match } from "@/lib/bracket";
-import { generateBracket, advanceWinner, resetMatch, getChampion } from "@/lib/bracket";
+import { useState, useEffect } from "react";
+import type { Championship, Participant, Match, Group, GroupMatch } from "@/lib/bracket";
+import { generateBracket, advanceWinner, resetMatch, getChampion, generateGroups, advanceFromGroups } from "@/lib/bracket";
 import { BracketView, BracketViewMobile } from "@/components/BracketView";
+import { GroupTable } from "@/components/GroupTable";
 import { Toast, ConfirmModal } from "@/components/ui";
 
 const emptyForm = {
@@ -15,12 +16,15 @@ const emptyForm = {
   prize: "",
   rules: "",
   notes: "",
+  format: "bracket",
+  groupCount: "2",
+  advancePerGroup: "2",
 };
 
 export default function AdminCampeonatos() {
   const [championships, setChampionships] = useState<Championship[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"list" | "edit" | "bracket">("list");
+  const [view, setView] = useState<"list" | "edit" | "manage">("list");
   const [selected, setSelected] = useState<Championship | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [toast, setToast] = useState("");
@@ -31,9 +35,10 @@ export default function AdminCampeonatos() {
   const [newParticipantLogo, setNewParticipantLogo] = useState("");
   const [editParticipant, setEditParticipant] = useState<{ idx: number; name: string; logo: string } | null>(null);
 
-  const [showMatchModal, setShowMatchModal] = useState<Match | null>(null);
+  const [showMatchModal, setShowMatchModal] = useState<{ match: Match | GroupMatch; type: "bracket" | "group"; groupId?: string } | null>(null);
   const [matchScore1, setMatchScore1] = useState("");
   const [matchScore2, setMatchScore2] = useState("");
+  const [manageTab, setManageTab] = useState<"groups" | "bracket">("groups");
 
   const load = async () => {
     try {
@@ -49,7 +54,7 @@ export default function AdminCampeonatos() {
 
   useEffect(() => { load(); }, []);
 
-  const save = async (champ: Championship): Promise<Championship | null> => {
+  const save = async (champ: Championship) => {
     const res = await fetch("/api/championships", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -57,7 +62,6 @@ export default function AdminCampeonatos() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Erro ao salvar");
-    return champ;
   };
 
   const reloadAndFind = async (id: string): Promise<Championship | null> => {
@@ -74,7 +78,7 @@ export default function AdminCampeonatos() {
       const res = await fetch("/api/championships", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, participants: [], matches: [] }),
+        body: JSON.stringify({ ...form, participants: [], matches: [], groups: [] }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -123,9 +127,6 @@ export default function AdminCampeonatos() {
       logo: newParticipantLogo,
     };
     const updated = { ...selected, participants: [...selected.participants, p] };
-    if (updated.status === "in_progress" || updated.participants.length >= 2) {
-      updated.matches = generateBracket(updated.participants);
-    }
     await save(updated);
     setNewParticipant("");
     setNewParticipantLogo("");
@@ -160,19 +161,6 @@ export default function AdminCampeonatos() {
     updated.participants = updated.participants.map((p, i) =>
       i === editParticipant.idx ? { ...p, name: editParticipant.name, logo: editParticipant.logo } : p
     );
-    updated.matches = generateBracket(updated.participants);
-    if (updated.status === "in_progress") {
-      for (const m of updated.matches) {
-        if (m.participant1) {
-          const newP = updated.participants.find((p) => p.id === m.participant1?.id);
-          if (newP) m.participant1 = newP;
-        }
-        if (m.participant2) {
-          const newP = updated.participants.find((p) => p.id === m.participant2?.id);
-          if (newP) m.participant2 = newP;
-        }
-      }
-    }
     await save(updated);
     setEditParticipant(null);
     const fresh = await reloadAndFind(selected.id);
@@ -183,47 +171,83 @@ export default function AdminCampeonatos() {
   const startChampionship = async () => {
     if (!selected) return;
     if (selected.participants.length < 2) { setToast("Minimo 2 participantes"); return; }
-    const updated = {
-      ...selected,
-      status: "in_progress" as const,
-      matches: generateBracket(selected.participants),
-    };
-    await save(updated);
-    setToast("Campeonato iniciado!");
+
+    if (form.format === "groups" || (selected as any).format === "groups") {
+      const gc = Number(form.groupCount) || 2;
+      const apg = Number(form.advancePerGroup) || 2;
+      const groups = generateGroups(selected.participants, gc);
+      groups.forEach((g) => { g.advanceCount = apg; });
+      const updated = { ...selected, status: "in_progress" as const, groups, matches: [] } as any;
+      await save(updated);
+      setToast("Campeonato iniciado com grupos!");
+    } else {
+      const updated = {
+        ...selected,
+        status: "in_progress" as const,
+        matches: generateBracket(selected.participants),
+        groups: [],
+      };
+      await save(updated);
+      setToast("Campeonato iniciado!");
+    }
     const fresh = await reloadAndFind(selected.id);
     if (fresh) setSelected(fresh);
     await load();
   };
 
-  const openMatchModal = (match: Match) => {
-    setShowMatchModal(match);
+  const generateBracketFromGroups = async () => {
+    if (!selected || !selected.groups) return;
+    const advancers = advanceFromGroups(selected.groups);
+    if (advancers.length < 2) { setToast("Nao ha times suficientes para o chaveamento"); return; }
+    const updated = { ...selected, matches: generateBracket(advancers) } as any;
+    await save(updated);
+    setToast("Chaveamento gerado!");
+    const fresh = await reloadAndFind(selected.id);
+    if (fresh) setSelected(fresh);
+    await load();
+  };
+
+  const openBracketMatch = (match: Match) => {
+    setShowMatchModal({ match, type: "bracket" });
     setMatchScore1(match.score1?.toString() || "");
     setMatchScore2(match.score2?.toString() || "");
   };
 
-  const setWinner = async (matchId: string, winnerId: string) => {
-    if (!selected) return;
-    const updated = { ...selected };
-    updated.matches = advanceWinner(updated.matches, matchId, winnerId);
-    updated.champion = getChampion(updated.matches);
-    if (updated.champion && updated.status !== "finished") {
-      updated.status = "finished";
-    }
-    await save(updated);
-    setShowMatchModal(null);
-    const fresh = await reloadAndFind(selected.id);
-    if (fresh) setSelected(fresh);
-    await load();
+  const openGroupMatch = (match: GroupMatch, groupId: string) => {
+    setShowMatchModal({ match, type: "group", groupId });
+    setMatchScore1(match.score1?.toString() || "");
+    setMatchScore2(match.score2?.toString() || "");
   };
 
-  const saveMatchScore = async () => {
+  const setWinner = async () => {
     if (!selected || !showMatchModal) return;
-    const updated = { ...selected };
-    const m = updated.matches.find((mm) => mm.id === showMatchModal.id);
-    if (m) {
-      m.score1 = matchScore1 ? Number(matchScore1) : null;
-      m.score2 = matchScore2 ? Number(matchScore2) : null;
+    const updated = { ...selected } as any;
+
+    if (showMatchModal.type === "bracket") {
+      const match = showMatchModal.match as Match;
+      const winnerId = matchScore1 !== "" && matchScore2 !== ""
+        ? (Number(matchScore1) > Number(matchScore2) ? match.participant1?.id : match.participant2?.id)
+        : null;
+      if (!winnerId) { setToast("Defina o placar primeiro"); return; }
+      updated.matches = advanceWinner(updated.matches, match.id, winnerId);
+      const m = updated.matches.find((mm: Match) => mm.id === match.id);
+      if (m) { m.score1 = Number(matchScore1); m.score2 = Number(matchScore2); }
+      updated.champion = getChampion(updated.matches);
+      if (updated.champion) updated.status = "finished";
+    } else {
+      const groupId = showMatchModal.groupId;
+      const match = showMatchModal.match as GroupMatch;
+      const group = updated.groups.find((g: Group) => g.id === groupId);
+      if (group) {
+        const gm = group.matches.find((m: GroupMatch) => m.id === match.id);
+        if (gm) {
+          gm.score1 = Number(matchScore1);
+          gm.score2 = Number(matchScore2);
+          gm.status = "finished";
+        }
+      }
     }
+
     await save(updated);
     setShowMatchModal(null);
     const fresh = await reloadAndFind(selected.id);
@@ -231,12 +255,22 @@ export default function AdminCampeonatos() {
     await load();
   };
 
-  const resetMatchResult = async (matchId: string) => {
-    if (!selected) return;
-    const updated = { ...selected };
-    updated.matches = resetMatch(updated.matches, matchId);
-    updated.champion = getChampion(updated.matches);
-    updated.status = updated.champion ? "finished" : "in_progress";
+  const resetMatchResult = async () => {
+    if (!selected || !showMatchModal) return;
+    const updated = { ...selected } as any;
+
+    if (showMatchModal.type === "bracket") {
+      updated.matches = resetMatch(updated.matches, showMatchModal.match.id);
+      updated.champion = getChampion(updated.matches);
+      updated.status = updated.champion ? "finished" : "in_progress";
+    } else {
+      const group = updated.groups.find((g: Group) => g.id === showMatchModal.groupId);
+      if (group) {
+        const gm = group.matches.find((m: GroupMatch) => m.id === showMatchModal.match.id);
+        if (gm) { gm.score1 = null; gm.score2 = null; gm.status = "pending"; }
+      }
+    }
+
     await save(updated);
     setShowMatchModal(null);
     const fresh = await reloadAndFind(selected.id);
@@ -260,14 +294,18 @@ export default function AdminCampeonatos() {
       prize: champ.prize,
       rules: champ.rules,
       notes: champ.notes,
+      format: (champ as any).format || "bracket",
+      groupCount: String((champ as any).groupCount || 2),
+      advancePerGroup: String((champ as any).advancePerGroup || 2),
     });
     setSelected(champ);
     setView("edit");
   };
 
-  const openBracket = (champ: Championship) => {
+  const openManage = (champ: Championship) => {
     setSelected(champ);
-    setView("bracket");
+    setManageTab(champ.groups && champ.groups.length > 0 ? "groups" : "bracket");
+    setView("manage");
   };
 
   const tf = (label: string, key: string, type = "text") => (
@@ -308,34 +346,28 @@ export default function AdminCampeonatos() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowMatchModal(null)}>
           <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-white mb-4">
-              {showMatchModal.participant1?.name || "?"} vs {showMatchModal.participant2?.name || "?"}
+              {showMatchModal.match.participant1?.name || "?"} vs {showMatchModal.match.participant2?.name || "?"}
             </h3>
 
-            {showMatchModal.participant1 && showMatchModal.participant2 && (
+            {showMatchModal.match.participant1 && showMatchModal.match.participant2 && (
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
-                  <span className="text-sm text-white/70 flex-1">{showMatchModal.participant1.name}</span>
+                  <span className="text-sm text-white/70 flex-1">{showMatchModal.match.participant1.name}</span>
                   <input type="number" value={matchScore1} onChange={(e) => setMatchScore1(e.target.value)} className="w-16 px-2 py-1 rounded bg-white/5 border border-white/10 text-white text-sm text-center" placeholder="0" />
-                  <button onClick={() => setWinner(showMatchModal.id, showMatchModal.participant1!.id)} className="px-3 py-1 rounded bg-green-500 text-white text-xs font-bold hover:bg-green-600">
-                    Venceu
-                  </button>
                 </div>
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
-                  <span className="text-sm text-white/70 flex-1">{showMatchModal.participant2.name}</span>
+                  <span className="text-sm text-white/70 flex-1">{showMatchModal.match.participant2.name}</span>
                   <input type="number" value={matchScore2} onChange={(e) => setMatchScore2(e.target.value)} className="w-16 px-2 py-1 rounded bg-white/5 border border-white/10 text-white text-sm text-center" placeholder="0" />
-                  <button onClick={() => setWinner(showMatchModal.id, showMatchModal.participant2!.id)} className="px-3 py-1 rounded bg-green-500 text-white text-xs font-bold hover:bg-green-600">
-                    Venceu
-                  </button>
                 </div>
               </div>
             )}
 
             <div className="flex gap-2">
-              <button onClick={saveMatchScore} className="flex-1 py-2 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/80">
-                Salvar Placar
+              <button onClick={setWinner} className="flex-1 py-2 rounded-lg bg-green-500 text-white text-sm font-bold hover:bg-green-600">
+                Salvar Resultado
               </button>
-              {showMatchModal.winner && (
-                <button onClick={() => resetMatchResult(showMatchModal.id)} className="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 text-sm font-bold hover:bg-red-500/20">
+              {showMatchModal.match.status === "finished" && (
+                <button onClick={resetMatchResult} className="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 text-sm font-bold hover:bg-red-500/20">
                   Resetar
                 </button>
               )}
@@ -367,6 +399,7 @@ export default function AdminCampeonatos() {
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-white/5">
                   <th className="text-left text-xs text-white/40 uppercase px-4 py-3">Campeonato</th>
+                  <th className="text-center text-xs text-white/40 uppercase px-4 py-3">Modo</th>
                   <th className="text-center text-xs text-white/40 uppercase px-4 py-3">Participantes</th>
                   <th className="text-center text-xs text-white/40 uppercase px-4 py-3">Status</th>
                   <th className="text-center text-xs text-white/40 uppercase px-4 py-3">Data</th>
@@ -379,6 +412,9 @@ export default function AdminCampeonatos() {
                         <div className="font-bold text-white">🏆 {c.name}</div>
                         {c.champion && <div className="text-[11px] text-yellow-400">Campeao: {c.champion.name}</div>}
                       </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="text-[10px] text-white/40">{(c as any).format === "groups" ? "Grupos" : "Chave"}</span>
+                      </td>
                       <td className="px-4 py-3 text-center text-white/60">{c.participants.length}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${statusColors[c.status]}`}>{statusLabels[c.status]}</span>
@@ -386,7 +422,7 @@ export default function AdminCampeonatos() {
                       <td className="px-4 py-3 text-center text-white/50 text-xs">{c.date || "—"}</td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex gap-1 justify-center">
-                          <button onClick={() => openBracket(c)} className="px-2 py-1 rounded bg-white/5 text-white/40 text-xs hover:bg-white/10" title="Gerenciar chave">&#9876;</button>
+                          <button onClick={() => openManage(c)} className="px-2 py-1 rounded bg-white/5 text-white/40 text-xs hover:bg-white/10" title="Gerenciar">&#9876;</button>
                           <button onClick={() => startEdit(c)} className="px-2 py-1 rounded bg-white/5 text-white/40 text-xs hover:bg-white/10" title="Editar">&#9998;</button>
                           <button onClick={() => handleDelete(c)} className="px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs hover:bg-red-500/20" title="Excluir">&#128465;</button>
                         </div>
@@ -415,6 +451,26 @@ export default function AdminCampeonatos() {
               {tf("Premiacao", "prize")}
             </div>
             {tf("Descricao", "description")}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {sf("Formato", "format", [
+                { v: "bracket", l: "Chave direto (eliminacao)" },
+                { v: "groups", l: "Fase de grupos + chave" },
+              ])}
+              {form.format === "groups" && sf("Grupos", "groupCount", [
+                { v: "2", l: "2 grupos" },
+                { v: "3", l: "3 grupos" },
+                { v: "4", l: "4 grupos" },
+                { v: "5", l: "5 grupos" },
+                { v: "6", l: "6 grupos" },
+                { v: "8", l: "8 grupos" },
+              ])}
+              {form.format === "groups" && sf("Classificados/Grupo", "advancePerGroup", [
+                { v: "1", l: "1 por grupo" },
+                { v: "2", l: "2 por grupo" },
+                { v: "3", l: "3 por grupo" },
+                { v: "4", l: "4 por grupo" },
+              ])}
+            </div>
             {sf("Status", "status", [
               { v: "open", l: "Inscricoes abertas" },
               { v: "scheduled", l: "Agendado" },
@@ -441,7 +497,7 @@ export default function AdminCampeonatos() {
         </div>
       )}
 
-      {view === "bracket" && selected && (
+      {view === "manage" && selected && (
         <div>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -452,6 +508,11 @@ export default function AdminCampeonatos() {
               {selected.status === "open" && (
                 <button onClick={startChampionship} className="px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-bold hover:bg-green-600">
                   Iniciar Campeonato
+                </button>
+              )}
+              {selected.status === "in_progress" && selected.groups && selected.groups.length > 0 && selected.matches.length === 0 && (
+                <button onClick={generateBracketFromGroups} className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/80">
+                  Gerar Chave
                 </button>
               )}
               <button onClick={() => startEdit(selected)} className="px-4 py-2 rounded-lg bg-white/5 text-white/40 text-sm hover:bg-white/10">
@@ -503,23 +564,52 @@ export default function AdminCampeonatos() {
             </div>
           )}
 
-          <div className="mb-4">
-            <h2 className="text-sm font-bold text-white/30 uppercase mb-4">Chaveamento</h2>
-            {selected.matches.length === 0 ? (
-              <div className="text-center py-8 text-white/30 text-sm">
-                {selected.participants.length < 2 ? "Adicione pelo menos 2 participantes para gerar a chave." : "Inicie o campeonato para gerar a chave."}
-              </div>
-            ) : (
-              <>
-                <div className="hidden sm:block">
-                  <BracketView championship={selected} onMatchClick={openMatchModal} admin />
+          {selected.groups && selected.groups.length > 0 && (
+            <div className="flex gap-2 mb-4">
+              <button onClick={() => setManageTab("groups")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${manageTab === "groups" ? "bg-primary text-white" : "bg-white/5 text-white/40 hover:bg-white/10"}`}>
+                Fase de Grupos
+              </button>
+              <button onClick={() => setManageTab("bracket")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${manageTab === "bracket" ? "bg-primary text-white" : "bg-white/5 text-white/40 hover:bg-white/10"}`}>
+                Chave
+              </button>
+            </div>
+          )}
+
+          {manageTab === "groups" && selected.groups && selected.groups.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {selected.groups.map((group) => (
+                <GroupTable key={group.id} group={group} onMatchClick={openGroupMatch} admin />
+              ))}
+            </div>
+          )}
+
+          {manageTab === "bracket" && (
+            <div className="mb-4">
+              <h2 className="text-sm font-bold text-white/30 uppercase mb-4">Chaveamento</h2>
+              {selected.matches.length === 0 ? (
+                <div className="text-center py-8 text-white/30 text-sm">
+                  {selected.groups && selected.groups.length > 0
+                    ? "Clique em 'Gerar Chave' apos a fase de grupos para gerar o chaveamento."
+                    : selected.participants.length < 2 ? "Adicione pelo menos 2 participantes." : "Inicie o campeonato para gerar a chave."}
                 </div>
-                <div className="sm:hidden">
-                  <BracketViewMobile championship={selected} onMatchClick={openMatchModal} admin />
-                </div>
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  <div className="hidden sm:block">
+                    <BracketView championship={selected} onMatchClick={openBracketMatch} admin />
+                  </div>
+                  <div className="sm:hidden">
+                    <BracketViewMobile championship={selected} onMatchClick={openBracketMatch} admin />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {(!selected.groups || selected.groups.length === 0) && manageTab === "groups" && (
+            <div className="text-center py-8 text-white/30 text-sm">
+              Nenhum grupo configurado. Edite o campeonato e selecione "Fase de grupos + chave" como formato.
+            </div>
+          )}
         </div>
       )}
     </div>
