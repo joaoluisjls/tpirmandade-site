@@ -45,6 +45,18 @@ export default function RecrutamentoPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.nick || !form.name || !form.age || !form.ffId || !form.email || !form.points || !form.experience || !form.contact || !form.reason) {
+      setError("Preencha todos os campos obrigatorios");
+      return;
+    }
+    if (roles.length === 0) {
+      setError("Selecione pelo menos uma funcao no Free Fire");
+      return;
+    }
+    if (!photo) {
+      setError("Envie sua foto de perfil");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -116,8 +128,8 @@ export default function RecrutamentoPage() {
               { name: "age", label: "Idade", type: "number", required: true, sm: false },
               { name: "ffId", label: "ID do Free Fire", type: "text", required: true, sm: false },
               { name: "email", label: "Email", type: "email", required: true, sm: false },
-              { name: "points", label: "Pontos Atuais da Guerras de Guildas", type: "number", required: false, sm: false },
-              { name: "experience", label: "Experiência", type: "select", required: false, sm: false },
+              { name: "points", label: "Pontos Atuais da Guerras de Guildas", type: "number", required: true, sm: false },
+              { name: "experience", label: "Experiencia", type: "select", required: true, sm: false },
               { name: "contact", label: "WhatsApp / Discord", type: "text", required: true, sm: true },
             ].map((field) => (
               <div key={field.name} className={field.sm ? "sm:col-span-2" : ""}>
@@ -136,7 +148,7 @@ export default function RecrutamentoPage() {
               </div>
             ))}
             <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Funcao no Free Fire (ate 3)</label>
+              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Funcao no Free Fire (ate 3) *</label>
               <div className="grid grid-cols-2 gap-2">
                 {ROLE_OPTIONS.map((r) => {
                   const selected = roles.includes(r.id);
@@ -155,7 +167,7 @@ export default function RecrutamentoPage() {
               <textarea name="reason" value={form.reason} onChange={handleChange} required rows={3} placeholder="Conte-nos por que quer fazer parte..." className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50 resize-none" />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5">Sua foto (opcional)</label>
+              <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5">Sua foto *</label>
               <div className="flex items-center gap-4">
                 <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" id="photo-upload" />
                 <label htmlFor="photo-upload" className="px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 hover:text-white cursor-pointer transition-colors">

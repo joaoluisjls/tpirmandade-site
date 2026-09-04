@@ -92,8 +92,16 @@ export function Gate({ children }: { children: React.ReactNode }) {
 
   const handleRecruit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.email || !form.nick || !form.name || !form.ffId) {
-      setError("Preencha email, nick, nome e ID do Free Fire");
+    if (!form.email || !form.nick || !form.name || !form.age || !form.ffId || !form.points || !form.experience || !form.whatsapp || !form.reason) {
+      setError("Preencha todos os campos obrigatorios");
+      return;
+    }
+    if (roles.length === 0) {
+      setError("Selecione pelo menos uma funcao no Free Fire");
+      return;
+    }
+    if (!photo) {
+      setError("Envie sua foto de perfil");
       return;
     }
 
@@ -199,8 +207,8 @@ export function Gate({ children }: { children: React.ReactNode }) {
                 <input type="text" name="name" value={form.name} onChange={handleChange} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="Seu nome" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-white/40 uppercase mb-1">Idade</label>
-                <input type="number" name="age" value={form.age} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="18" />
+                <label className="block text-xs font-bold text-white/40 uppercase mb-1">Idade *</label>
+                <input type="number" name="age" value={form.age} onChange={handleChange} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="18" />
               </div>
             </div>
 
@@ -210,15 +218,15 @@ export function Gate({ children }: { children: React.ReactNode }) {
                 <input type="text" name="ffId" value={form.ffId} onChange={handleChange} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="123456789" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-white/40 uppercase mb-1">Pontos Atuais da Guerras de Guildas</label>
-                <input type="number" name="points" value={form.points} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="0" />
+                <label className="block text-xs font-bold text-white/40 uppercase mb-1">Pontos Atuais da Guerras de Guildas *</label>
+                <input type="number" name="points" value={form.points} onChange={handleChange} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="0" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-white/40 uppercase mb-1">Experiencia</label>
-                <select name="experience" value={form.experience} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50">
+                <label className="block text-xs font-bold text-white/40 uppercase mb-1">Experiencia *</label>
+                <select name="experience" value={form.experience} onChange={handleChange} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50">
                   <option value="" className="bg-[#0a0a0f]">Selecione</option>
                   <option value="iniciante" className="bg-[#0a0a0f]">Iniciante</option>
                   <option value="intermediario" className="bg-[#0a0a0f]">Intermediario</option>
@@ -227,13 +235,13 @@ export function Gate({ children }: { children: React.ReactNode }) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-white/40 uppercase mb-1">WhatsApp</label>
-                <input type="text" name="whatsapp" value={form.whatsapp} onChange={handleChange} className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="(00) 00000-0000" />
+                <label className="block text-xs font-bold text-white/40 uppercase mb-1">WhatsApp *</label>
+                <input type="text" name="whatsapp" value={form.whatsapp} onChange={handleChange} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50" placeholder="(00) 00000-0000" />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-white/40 uppercase mb-2">Funcao no Free Fire (ate 3)</label>
+              <label className="block text-xs font-bold text-white/40 uppercase mb-2">Funcao no Free Fire (ate 3) *</label>
               <div className="grid grid-cols-2 gap-2">
                 {ROLE_OPTIONS.map((r) => {
                   const selected = roles.includes(r.id);
@@ -252,7 +260,7 @@ export function Gate({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-3">
                 <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" id="gate-photo" />
                 <label htmlFor="gate-photo" className="px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/60 text-sm hover:bg-white/10 hover:text-white cursor-pointer transition-colors">
-                  {photoName ? "Trocar foto" : "Escolher foto"}
+                  {photoName ? "Trocar foto" : "Escolher foto *"}
                 </label>
                 {photoName && (
                   <div className="flex items-center gap-2">
