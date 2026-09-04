@@ -234,7 +234,7 @@ export default function AdminCampeonatos() {
 
   const setWinner = async () => {
     if (!selected || !showMatchModal) return;
-    const updated = { ...selected } as any;
+    const updated = JSON.parse(JSON.stringify(selected)) as Championship;
 
     if (showMatchModal.type === "bracket") {
       const match = showMatchModal.match as Match;
@@ -270,7 +270,7 @@ export default function AdminCampeonatos() {
 
   const resetMatchResult = async () => {
     if (!selected || !showMatchModal) return;
-    const updated = { ...selected } as any;
+    const updated = JSON.parse(JSON.stringify(selected)) as Championship;
 
     if (showMatchModal.type === "bracket") {
       updated.matches = resetMatch(updated.matches, showMatchModal.match.id);
