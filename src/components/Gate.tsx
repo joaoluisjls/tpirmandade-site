@@ -6,7 +6,8 @@ const APPROVAL_KEY = "tpi_user_approved";
 const EMAIL_KEY = "tpi_user_email";
 
 const ROLE_OPTIONS = [
-  { id: "rush", label: "Full GasRush" },
+  { id: "fullgas", label: "Full Gas" },
+  { id: "rush", label: "Rush" },
   { id: "suporte", label: "Suporte" },
   { id: "capitao", label: "Capitao" },
   { id: "granadeiro", label: "Granadeiro" },

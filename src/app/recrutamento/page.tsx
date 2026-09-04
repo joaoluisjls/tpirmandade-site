@@ -3,7 +3,8 @@
 import { useState, useRef } from "react";
 
 const ROLE_OPTIONS = [
-  { id: "rush", label: "Full GasRush" },
+  { id: "fullgas", label: "Full Gas" },
+  { id: "rush", label: "Rush" },
   { id: "suporte", label: "Suporte" },
   { id: "capitao", label: "Capitao" },
   { id: "granadeiro", label: "Granadeiro" },

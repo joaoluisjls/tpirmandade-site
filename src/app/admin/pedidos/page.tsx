@@ -20,7 +20,8 @@ interface Request {
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  rush: "Full GasRush",
+  fullgas: "Full Gas",
+  rush: "Rush",
   suporte: "Suporte",
   capitao: "Capitao",
   granadeiro: "Granadeiro",

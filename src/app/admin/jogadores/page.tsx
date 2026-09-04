@@ -11,7 +11,8 @@ interface Player {
 interface ContactInfo { whatsapp: string; ff_id: string; age: number; experience: string; email: string; roles: string[]; }
 
 const ROLE_OPTIONS = [
-  { id: "rush", label: "Full GasRush" },
+  { id: "fullgas", label: "Full Gas" },
+  { id: "rush", label: "Rush" },
   { id: "suporte", label: "Suporte" },
   { id: "capitao", label: "Capitao" },
   { id: "granadeiro", label: "Granadeiro" },
