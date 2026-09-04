@@ -21,9 +21,8 @@ export function Navbar() {
   const [approved, setApproved] = useState(false);
 
   useEffect(() => {
-    const email = localStorage.getItem("tpi_gate_email");
-    const approval = localStorage.getItem("tpi_gate_approval");
-    if (email && approval === "approved") setApproved(true);
+    const approved = localStorage.getItem("tpi_user_approved");
+    if (approved === "true") setApproved(true);
   }, []);
 
   const navLinks = approved ? ALL_NAV_LINKS.filter((l) => !(l as any).publicOnly) : ALL_NAV_LINKS;
