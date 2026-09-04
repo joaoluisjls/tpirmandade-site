@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GUILD } from "@/data/guild";
 
-const NAV_LINKS = [
+const ALL_NAV_LINKS = [
   { href: "/", label: "Início" },
   { href: "/ranking", label: "Ranking" },
   { href: "/mvp", label: "MVP" },
@@ -13,11 +13,20 @@ const NAV_LINKS = [
   { href: "/estatisticas", label: "Estatísticas" },
   { href: "/conquistas", label: "Conquistas" },
   { href: "/regras", label: "Regras" },
-  { href: "/recrutamento", label: "Recrutamento" },
+  { href: "/recrutamento", label: "Recrutamento", publicOnly: true },
 ];
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const [approved, setApproved] = useState(false);
+
+  useEffect(() => {
+    const email = localStorage.getItem("tpi_gate_email");
+    const approval = localStorage.getItem("tpi_gate_approval");
+    if (email && approval === "approved") setApproved(true);
+  }, []);
+
+  const navLinks = approved ? ALL_NAV_LINKS.filter((l) => !(l as any).publicOnly) : ALL_NAV_LINKS;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5">
@@ -29,16 +38,18 @@ export function Navbar() {
           </Link>
 
           <nav className="hidden lg:flex items-center gap-1">
-            {NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               <Link key={link.href} href={link.href} className="px-3 py-2 rounded-lg text-sm text-white/50 hover:text-white hover:bg-white/5 transition-colors">
                 {link.label}
               </Link>
             ))}
           </nav>
 
-          <Link href="/recrutamento" className="hidden lg:inline-flex px-5 py-2 rounded-lg bg-gradient-to-r from-primary to-primary-dark text-white text-sm font-bold hover:shadow-lg hover:shadow-primary/20 transition-all">
-            ENTRAR NA GUILDA
-          </Link>
+          {!approved && (
+            <Link href="/recrutamento" className="hidden lg:inline-flex px-5 py-2 rounded-lg bg-gradient-to-r from-primary to-primary-dark text-white text-sm font-bold hover:shadow-lg hover:shadow-primary/20 transition-all">
+              ENTRAR NA GUILDA
+            </Link>
+          )}
 
           <button onClick={() => setOpen(!open)} className="lg:hidden p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/5" aria-label="Menu">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,14 +65,16 @@ export function Navbar() {
 
       {open && (
         <div className="lg:hidden border-t border-white/5 bg-black/95 p-3 space-y-1">
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className="block px-4 py-2.5 rounded-lg text-sm text-white/50 hover:text-white hover:bg-white/5 transition-colors">
               {link.label}
             </Link>
           ))}
-          <Link href="/recrutamento" onClick={() => setOpen(false)} className="block text-center px-4 py-2.5 rounded-lg bg-gradient-to-r from-primary to-primary-dark text-white text-sm font-bold mt-2">
-            ENTRAR NA GUILDA
-          </Link>
+          {!approved && (
+            <Link href="/recrutamento" onClick={() => setOpen(false)} className="block text-center px-4 py-2.5 rounded-lg bg-gradient-to-r from-primary to-primary-dark text-white text-sm font-bold mt-2">
+              ENTRAR NA GUILDA
+            </Link>
+          )}
         </div>
       )}
     </header>
