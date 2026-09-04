@@ -253,6 +253,15 @@ export default function GuerrasPage() {
                     </div>
                   )}
 
+                  {selectedChamp.status === "open" && (
+                    <div className="mt-4 p-4 rounded-lg bg-green-500/5 border border-green-500/20 text-center">
+                      <p className="text-sm text-green-400 mb-2">Inscricoes abertas! Inscreva seu time.</p>
+                      <a href="/campeonatos/inscricao" className="inline-block px-6 py-2 rounded-lg bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors">
+                        Inscrever Time
+                      </a>
+                    </div>
+                  )}
+
                   {selectedChamp.rules && (
                     <div className="mt-4 p-4 rounded-lg bg-white/[0.02] border border-white/5">
                       <div className="text-xs font-bold text-white/30 uppercase mb-1">Regras</div>

@@ -38,7 +38,9 @@ export default function AdminCampeonatos() {
   const [showMatchModal, setShowMatchModal] = useState<{ match: Match | GroupMatch; type: "bracket" | "group"; groupId?: string } | null>(null);
   const [matchScore1, setMatchScore1] = useState("");
   const [matchScore2, setMatchScore2] = useState("");
-  const [manageTab, setManageTab] = useState<"groups" | "bracket">("groups");
+  const [manageTab, setManageTab] = useState<"subs" | "groups" | "bracket">("subs");
+  const [subs, setSubs] = useState<any[]>([]);
+  const [loadingSubs, setLoadingSubs] = useState(false);
 
   const load = async () => {
     try {
@@ -428,10 +430,76 @@ export default function AdminCampeonatos() {
     setView("edit");
   };
 
-  const openManage = (champ: Championship) => {
+  const openManage = async (champ: Championship) => {
     setSelected(champ);
-    setManageTab(champ.groups && champ.groups.length > 0 ? "groups" : "bracket");
+    if (champ.status === "open") setManageTab("subs");
+    else if (champ.groups && champ.groups.length > 0) setManageTab("groups");
+    else setManageTab("bracket");
     setView("manage");
+    setLoadingSubs(true);
+    try {
+      const res = await fetch(`/api/championship-subscriptions?championshipId=${champ.id}`);
+      const data = await res.json();
+      setSubs(Array.isArray(data) ? data : []);
+    } catch { setSubs([]); }
+    finally { setLoadingSubs(false); }
+  };
+
+  const approveSub = async (sub: any) => {
+    if (!selected) return;
+    await fetch("/api/championship-subscriptions", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ championshipId: selected.id, subId: sub.id, status: "approved" }),
+    });
+    setSubs(prev => prev.map(s => s.id === sub.id ? { ...s, status: "approved" } : s));
+    setToast(`${sub.teamName} aprovado!`);
+  };
+
+  const rejectSub = async (sub: any) => {
+    if (!selected) return;
+    await fetch("/api/championship-subscriptions", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ championshipId: selected.id, subId: sub.id, status: "rejected" }),
+    });
+    setSubs(prev => prev.map(s => s.id === sub.id ? { ...s, status: "rejected" } : s));
+    setToast(`${sub.teamName} rejeitado`);
+  };
+
+  const removeSub = async (sub: any) => {
+    if (!selected) return;
+    await fetch(`/api/championship-subscriptions?championshipId=${selected.id}&subId=${sub.id}`, { method: "DELETE" });
+    setSubs(prev => prev.filter(s => s.id !== sub.id));
+    setToast(`${sub.teamName} removido`);
+  };
+
+  const startFromSubs = async () => {
+    if (!selected) return;
+    const approved = subs.filter(s => s.status === "approved");
+    if (approved.length < 2) { setToast("Minimo 2 times aprovados"); return; }
+    const participants = approved.map(s => ({
+      id: `p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: s.teamName,
+      logo: s.logo || "",
+    }));
+    if ((selected as any).format === "groups") {
+      const gc = Number((selected as any).groupCount) || 2;
+      const apg = Number((selected as any).advancePerGroup) || 2;
+      const groups = generateGroups(participants, gc);
+      groups.forEach((g) => { g.advanceCount = apg; });
+      const updated = { ...selected, participants, status: "in_progress" as const, groups, matches: [] } as any;
+      await save(updated);
+      setToast("Campeonato iniciado com grupos!");
+    } else {
+      const matches = generateBracketEmpty(participants.length);
+      const updated = { ...selected, participants, status: "in_progress" as const, matches, groups: [] } as any;
+      await save(updated);
+      setToast("Campeonato iniciado!");
+    }
+    const fresh = await reloadAndFind(selected.id);
+    if (fresh) setSelected(fresh);
+    await load();
   };
 
   const tf = (label: string, key: string, type = "text") => (
@@ -630,10 +698,10 @@ export default function AdminCampeonatos() {
               <button onClick={() => setView("list")} className="text-white/30 hover:text-white text-sm">&#8592;</button>
               <h1 className="text-2xl font-black text-white">🏆 {selected.name}</h1>
             </div>
-            <div className="flex gap-2">
+          <div className="flex gap-2 mb-4">
               {selected.status === "open" && (
-                <button onClick={startChampionship} className="px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-bold hover:bg-green-600">
-                  Iniciar Campeonato
+                <button onClick={startFromSubs} className="px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-bold hover:bg-green-600">
+                  Iniciar com Inscritos ({subs.filter(s => s.status === "approved").length} aprovados)
                 </button>
               )}
               {selected.status === "in_progress" && selected.groups && selected.groups.length > 0 && (selected.matches.length === 0 || (selected as any).format === "groups") && (
@@ -690,14 +758,65 @@ export default function AdminCampeonatos() {
             </div>
           )}
 
-          {selected.groups && selected.groups.length > 0 && (
-            <div className="flex gap-2 mb-4">
-              <button onClick={() => setManageTab("groups")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${manageTab === "groups" ? "bg-primary text-white" : "bg-white/5 text-white/40 hover:bg-white/10"}`}>
-                Fase de Grupos
-              </button>
-              <button onClick={() => setManageTab("bracket")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${manageTab === "bracket" ? "bg-primary text-white" : "bg-white/5 text-white/40 hover:bg-white/10"}`}>
-                Chave
-              </button>
+          <div className="flex gap-2 mb-4">
+              {selected.status === "open" && (
+                <button onClick={() => setManageTab("subs")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${manageTab === "subs" ? "bg-primary text-white" : "bg-white/5 text-white/40 hover:bg-white/10"}`}>
+                  Inscritos ({subs.length})
+                </button>
+              )}
+              {selected.groups && selected.groups.length > 0 && (
+                <>
+                  <button onClick={() => setManageTab("groups")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${manageTab === "groups" ? "bg-primary text-white" : "bg-white/5 text-white/40 hover:bg-white/10"}`}>
+                    Fase de Grupos
+                  </button>
+                  <button onClick={() => setManageTab("bracket")} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${manageTab === "bracket" ? "bg-primary text-white" : "bg-white/5 text-white/40 hover:bg-white/10"}`}>
+                    Chave
+                  </button>
+                </>
+              )}
+            </div>
+
+          {manageTab === "subs" && selected.status === "open" && (
+            <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 mb-6">
+              <h2 className="text-sm font-bold text-white/30 uppercase mb-4">Inscritos no Campeonato</h2>
+              {loadingSubs ? <p className="text-white/40 text-sm">Carregando...</p> : subs.length === 0 ? (
+                <p className="text-white/30 text-sm">Nenhum time inscrito ainda.</p>
+              ) : (
+                <div className="space-y-2">
+                  {subs.map((s) => (
+                    <div key={s.id} className={`flex items-center justify-between p-3 rounded-lg ${s.status === "approved" ? "bg-green-500/5 border border-green-500/20" : s.status === "rejected" ? "bg-red-500/5 border border-red-500/20" : "bg-white/5 border border-white/10"}`}>
+                      <div className="flex items-center gap-3">
+                        {s.logo ? <img src={s.logo} alt="" className="w-8 h-8 rounded object-cover" /> : <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">{s.teamName[0]}</div>}
+                        <div>
+                          <div className="text-sm font-bold text-white">{s.teamName}</div>
+                          <div className="text-[10px] text-white/30">Cap: {s.captainName} | {s.captainEmail} | {s.members.length + 1} jogadores</div>
+                          {s.members.length > 0 && <div className="text-[10px] text-white/20">Elenco: {s.members.join(", ")}</div>}
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        {s.status === "pending" ? (
+                          <>
+                            <button onClick={() => approveSub(s)} className="px-3 py-1 rounded bg-green-500 text-white text-xs font-bold hover:bg-green-600">Aprovar</button>
+                            <button onClick={() => rejectSub(s)} className="px-3 py-1 rounded bg-red-500/10 text-red-400 text-xs hover:bg-red-500/20">Rejeitar</button>
+                          </>
+                        ) : s.status === "approved" ? (
+                          <span className="px-2 py-0.5 rounded bg-green-500/10 text-green-400 text-[10px] font-bold">APROVADO</span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-400 text-[10px] font-bold">REJEITADO</span>
+                        )}
+                        <button onClick={() => removeSub(s)} className="px-2 py-1 rounded bg-white/5 text-white/30 text-xs hover:bg-white/10">X</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {subs.filter(s => s.status === "approved").length >= 2 && selected.status === "open" && (
+                <div className="mt-4 pt-4 border-t border-white/5">
+                  <button onClick={startFromSubs} className="px-6 py-2.5 rounded-lg bg-green-500 text-white text-sm font-bold hover:bg-green-600">
+                    Iniciar Campeonato com {subs.filter(s => s.status === "approved").length} times aprovados
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -733,7 +852,9 @@ export default function AdminCampeonatos() {
 
           {(!selected.groups || selected.groups.length === 0) && manageTab === "groups" && (
             <div className="text-center py-8 text-white/30 text-sm">
-              Nenhum grupo configurado. Edite o campeonato e selecione "Fase de grupos + chave" como formato.
+              {selected.status === "open"
+                ? "Aguarde as inscricoes e inicie o campeonato para gerar os grupos."
+                : "Nenhum grupo configurado. Edite o campeonato e selecione 'Fase de grupos + chave' como formato."}
             </div>
           )}
         </div>
