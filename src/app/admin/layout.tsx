@@ -11,6 +11,7 @@ const MENU = [
   { href: "/admin/mvp", label: "MVP", icon: "🏆" },
   { href: "/admin/ranking", label: "Ranking", icon: "🥇" },
   { href: "/admin/guerras", label: "Guerras", icon: "⚔️" },
+  { href: "/admin/campeonatos", label: "Campeonatos", icon: "🏆" },
   { href: "/admin/conquistas", label: "Conquistas", icon: "🎯" },
   { href: "/admin/avisos", label: "Avisos", icon: "📢" },
   { href: "/admin/regras", label: "Regras", icon: "📜" },
