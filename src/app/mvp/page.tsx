@@ -1,12 +1,17 @@
 import MVPClient from "./MVPClient";
-import { getAnonClient } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+export const dynamic = "force-dynamic";
 
 export default async function MVPPage() {
-  const supabase = getAnonClient();
-  const { data: players } = await supabase
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
+  const { data: players, error } = await supabase
     .from("players")
     .select("id, nick, name, role, avatar, points, bio")
     .order("points", { ascending: false });
+
+  if (error) console.error("MVPPage error:", error.message);
 
   return <MVPClient initialPlayers={players ?? []} />;
 }

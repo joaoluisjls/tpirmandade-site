@@ -1,12 +1,17 @@
 import RankingClient from "./RankingClient";
-import { getAnonClient } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+export const dynamic = "force-dynamic";
 
 export default async function RankingPage() {
-  const supabase = getAnonClient();
-  const { data: players } = await supabase
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
+  const { data: players, error } = await supabase
     .from("players")
     .select("id, nick, name, role, avatar, status, points")
     .order("points", { ascending: false });
+
+  if (error) console.error("RankingPage error:", error.message);
 
   const { data: settingsData } = await supabase
     .from("guild_settings")
