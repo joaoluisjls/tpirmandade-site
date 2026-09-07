@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { Championship } from "@/lib/bracket";
 import { BracketView, BracketViewMobile } from "@/components/BracketView";
 import { GroupTable } from "@/components/GroupTable";
@@ -39,11 +39,26 @@ const statusLabels: Record<string, string> = {
   scheduled: "Agendado",
 };
 
-export default function GuerrasClient({ wars, guild, championships }: { wars: War[]; guild: GuildInfo; championships: Championship[] }) {
+export default function GuerrasClient() {
   const [tab, setTab] = useState<Tab>("guerras");
   const [filter, setFilter] = useState<Filter>("todas");
+  const [wars, setWars] = useState<War[]>([]);
+  const [guild, setGuild] = useState<GuildInfo>({ name: "", tag: "" });
+  const [championships, setChampionships] = useState<Championship[]>([]);
   const [selectedChamp, setSelectedChamp] = useState<Championship | null>(null);
   const [champFilter, setChampFilter] = useState<"all" | "open" | "in_progress" | "finished">("all");
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/wars").then(r => r.json()),
+      fetch("/api/settings").then(r => r.json()),
+      fetch("/api/championships").then(r => r.json()),
+    ]).then(([w, s, c]) => {
+      setWars(Array.isArray(w) ? w : []);
+      setGuild({ name: s?.guild_name ?? "", tag: s?.guild_tag ?? "" });
+      setChampionships(Array.isArray(c) ? c : []);
+    });
+  }, []);
 
   const filteredWars = useMemo(() => {
     if (filter === "vitorias") return wars.filter((w) => w.result === "victory");

@@ -26,20 +26,26 @@ function PlayerCard({ player, subtitle, ring }: { player: Player; subtitle?: str
   );
 }
 
-export default function MVPClient({ players }: { players: Player[] }) {
+export default function MVPClient() {
+  const [players, setPlayers] = useState<Player[]>([]);
   const [guildMVP, setGuildMVP] = useState<Player | null>(null);
   const [guildTop3, setGuildTop3] = useState<Player[]>([]);
 
+  useEffect(() => {
+    fetch("/api/players").then(r => r.json()).then((d: any[]) => {
+      const all = d.map((p: any) => ({ id: p.id, nick: p.nick, name: p.name, role: p.role, avatar: p.avatar ?? "", points: p.points, bio: p.bio }));
+      setPlayers(all);
+      const sorted = [...all].sort((a: any, b: any) => b.points - a.points);
+      try {
+        const g: GuildMVP = JSON.parse(localStorage.getItem(GUILD_KEY) || '{"mvp_id":"","top3_ids":[]}');
+        if (g.mvp_id) { const p = all.find((x: any) => x.id === g.mvp_id); if (p) setGuildMVP(p); }
+        if (g.top3_ids.length) { setGuildTop3(g.top3_ids.map((id: string) => all.find((x: any) => x.id === id)).filter(Boolean) as Player[]); }
+      } catch { /* ignore */ }
+    });
+  }, []);
+
   const sorted = [...players].sort((a, b) => b.points - a.points);
   const weekly = sorted.slice(0, 3);
-
-  useEffect(() => {
-    try {
-      const g: GuildMVP = JSON.parse(localStorage.getItem(GUILD_KEY) || '{"mvp_id":"","top3_ids":[]}');
-      if (g.mvp_id) { const p = players.find((x) => x.id === g.mvp_id); if (p) setGuildMVP(p); }
-      if (g.top3_ids.length) { setGuildTop3(g.top3_ids.map((id) => players.find((x) => x.id === id)).filter(Boolean) as Player[]); }
-    } catch { /* ignore */ }
-  }, [players]);
 
   const medals = ["🥇", "🥈", "🥉"];
 

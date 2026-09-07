@@ -69,20 +69,42 @@ const GUILD_HISTORY = [
 const GUILD_MVP_KEY = "tpi_guild_mvp";
 interface GuildMVP { mvp_id: string; top3_ids: string[]; }
 
-interface Props {
-  players: Player[];
-  wars: War[];
-  achievements: Achievement[];
-  announcements: Announcement[];
-  settings: GuildSettings;
-}
-
-export default function HomePageClient({ players, wars, achievements, announcements, settings }: Props) {
+export default function HomePageClient() {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [wars, setWars] = useState<War[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [settings, setSettings] = useState<GuildSettings>({});
+  const [loading, setLoading] = useState(true);
   const [guildMVPData, setGuildMVPData] = useState<GuildMVP>({ mvp_id: "", top3_ids: [] });
 
   useEffect(() => {
-    try { setGuildMVPData(JSON.parse(localStorage.getItem(GUILD_MVP_KEY) || '{"mvp_id":"","top3_ids":[]}')); } catch { /* ignore */ }
+    Promise.all([
+      fetch("/api/players").then(r => r.json()),
+      fetch("/api/wars").then(r => r.json()),
+      fetch("/api/achievements").then(r => r.json()),
+      fetch("/api/announcements").then(r => r.json()),
+      fetch("/api/settings").then(r => r.json()),
+    ]).then(([p, w, a, an, s]) => {
+      setPlayers(Array.isArray(p) ? p : []);
+      setWars(Array.isArray(w) ? w : []);
+      setAchievements(Array.isArray(a) ? a : []);
+      setAnnouncements(Array.isArray(an) ? an : []);
+      setSettings(s || {});
+      try { setGuildMVPData(JSON.parse(localStorage.getItem(GUILD_MVP_KEY) || '{"mvp_id":"","top3_ids":[]}')); } catch { /* */ }
+    }).finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return (
+      <div className="pt-24 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-4xl mb-4 animate-pulse">⚔️</div>
+          <div className="text-white/60 text-sm">Carregando dados da guilda...</div>
+        </div>
+      </div>
+    );
+  }
 
   const guild = {
     name: settings?.guild_name ?? "",
@@ -231,7 +253,7 @@ export default function HomePageClient({ players, wars, achievements, announceme
         </div>
       </section>
 
-      {/* MVP DA GUILDA - Manual */}
+      {/* MVP DA GUILDA */}
       {guildMVPPlayer && (
         <section className="py-20">
           <div className="max-w-5xl mx-auto px-4 sm:px-6">

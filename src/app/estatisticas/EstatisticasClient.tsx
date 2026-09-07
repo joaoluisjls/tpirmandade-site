@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 
 const RechartsArea = dynamic(() => import("recharts").then(m => {
@@ -93,39 +93,40 @@ interface War {
   status: string;
 }
 
-export default function EstatisticasClient({ players, wars }: { players: Player[]; wars: War[] }) {
-  const finishedWars = wars.filter((w) => w.status === "finished");
-  const wins = wars.filter((w) => w.result === "victory").length;
-  const kills = players.reduce((sum, p) => sum + (p.kills || 0), 0);
-  const warsCount = finishedWars.length;
-  const winRate = warsCount > 0 ? (wins / warsCount) * 100 : 0;
-  const topPlayers = [...players].sort((a, b) => (b.matches || 0) - (a.matches || 0)).slice(0, 5);
+export default function EstatisticasClient() {
+  const [stats, setStats] = useState<any>(null);
 
-  const stats = {
-    members: players.length,
-    wins,
-    wars: warsCount,
-    kills,
-    mvps: 156,
-    winRate: winRate.toFixed(1),
-    weeklyEvolution: [
-      { week: "Sem 1", points: 120 }, { week: "Sem 2", points: 185 },
-      { week: "Sem 3", points: 210 }, { week: "Sem 4", points: 195 },
-      { week: "Sem 5", points: 240 }, { week: "Sem 6", points: 280 },
-      { week: "Sem 7", points: 310 }, { week: "Sem 8", points: 295 },
-    ],
-    winsVsLosses: [
-      { name: "Vitórias", value: wins },
-      { name: "Derrotas", value: warsCount - wins },
-    ],
-    killsPerWeek: [
-      { week: "Sem 1", kills: 45 }, { week: "Sem 2", kills: 52 },
-      { week: "Sem 3", kills: 38 }, { week: "Sem 4", kills: 61 },
-      { week: "Sem 5", kills: 48 }, { week: "Sem 6", kills: 55 },
-      { week: "Sem 7", kills: 67 }, { week: "Sem 8", kills: 58 },
-    ],
-    participation: topPlayers.map((p) => ({ name: p.nick, matches: p.matches || 0 })),
-  };
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/players").then(r => r.json()),
+      fetch("/api/wars").then(r => r.json()),
+    ]).then(([rawPlayers, rawWars]: [any[], any[]]) => {
+      const finishedWars = rawWars.filter((w: any) => w.status === "finished");
+      const wins = rawWars.filter((w: any) => w.result === "victory").length;
+      const kills = rawPlayers.reduce((sum: number, p: any) => sum + (p.kills || 0), 0);
+      const warsCount = finishedWars.length;
+      const winRate = warsCount > 0 ? (wins / warsCount) * 100 : 0;
+      const topPlayers = [...rawPlayers].sort((a: any, b: any) => (b.matches || 0) - (a.matches || 0)).slice(0, 5);
+
+      setStats({
+        members: rawPlayers.length, wins, wars: warsCount, kills, mvps: 156, winRate: winRate.toFixed(1),
+        weeklyEvolution: [
+          { week: "Sem 1", points: 120 }, { week: "Sem 2", points: 185 }, { week: "Sem 3", points: 210 },
+          { week: "Sem 4", points: 195 }, { week: "Sem 5", points: 240 }, { week: "Sem 6", points: 280 },
+          { week: "Sem 7", points: 310 }, { week: "Sem 8", points: 295 },
+        ],
+        winsVsLosses: [{ name: "Vitórias", value: wins }, { name: "Derrotas", value: warsCount - wins }],
+        killsPerWeek: [
+          { week: "Sem 1", kills: 45 }, { week: "Sem 2", kills: 52 }, { week: "Sem 3", kills: 38 },
+          { week: "Sem 4", kills: 61 }, { week: "Sem 5", kills: 48 }, { week: "Sem 6", kills: 55 },
+          { week: "Sem 7", kills: 67 }, { week: "Sem 8", kills: 58 },
+        ],
+        participation: topPlayers.map((p: any) => ({ name: p.nick, matches: p.matches || 0 })),
+      });
+    });
+  }, []);
+
+  if (!stats) return <div className="pt-28 pb-20 text-center text-white/40">Carregando...</div>;
 
   return (
     <div className="pt-28 pb-20">
