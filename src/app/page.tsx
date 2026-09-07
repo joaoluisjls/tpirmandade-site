@@ -1,6 +1,8 @@
 import { fetchPlayers, fetchWars, fetchSettings, fetchAchievements, fetchAnnouncements } from "@/lib/data";
 import HomePageClient from "./HomeClient";
 
+export const revalidate = 30;
+
 export default async function HomePage() {
   const [players, wars, settings, achievements, announcements] = await Promise.all([
     fetchPlayers(),

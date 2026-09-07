@@ -1,22 +1,16 @@
-"use client";
+import { fetchRules } from "@/lib/data";
 
-import { useEffect, useState } from "react";
+export const revalidate = 30;
 
 interface Rule {
   id: string;
-  text: string;
+  title: string;
+  content: string;
   category: string;
-  highlighted: boolean;
 }
 
-export default function RegrasPage() {
-  const [rules, setRules] = useState<Rule[]>([]);
-
-  useEffect(() => {
-    fetch("/api/rules")
-      .then((res) => res.json())
-      .then((data) => setRules(data));
-  }, []);
+export default async function RegrasPage() {
+  const rules = (await fetchRules()) as Rule[];
 
   const categories: Record<string, { label: string; icon: string; color: string }> = {
     respeito: { label: "Respeito", icon: "🤝", color: "text-blue-400" },
@@ -47,14 +41,13 @@ export default function RegrasPage() {
           {rules.map((rule) => {
             const cat = categories[rule.category];
             return (
-              <div key={rule.id} className={`rounded-xl border p-4 ${rule.highlighted ? "border-primary/30 bg-primary/5" : "border-white/5 bg-white/[0.02]"}`}>
+              <div key={rule.id} className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center font-black text-sm text-white shrink-0">{rule.id}</div>
                   <div className="flex-1">
-                    <p className="text-white/80 text-sm">{rule.text}</p>
+                    <p className="text-white/80 text-sm">{rule.content}</p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className={`text-xs ${cat?.color || "text-white/30"}`}>{cat?.icon} {cat?.label}</span>
-                      {rule.highlighted && <span className="text-xs text-primary font-bold">ESSENCIAL</span>}
                     </div>
                   </div>
                 </div>

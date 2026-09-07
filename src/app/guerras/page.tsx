@@ -1,6 +1,8 @@
 import { fetchWars, fetchSettings, fetchChampionships } from "@/lib/data";
 import GuerrasClient from "./GuerrasClient";
 
+export const revalidate = 30;
+
 export default async function GuerrasPage() {
   const [rawWars, settings, rawChamps] = await Promise.all([
     fetchWars(),

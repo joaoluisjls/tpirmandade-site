@@ -1,6 +1,8 @@
 import { fetchPlayers, fetchWars } from "@/lib/data";
 import EstatisticasClient from "./EstatisticasClient";
 
+export const revalidate = 30;
+
 export default async function EstatisticasPage() {
   const [rawPlayers, rawWars] = await Promise.all([fetchPlayers(), fetchWars()]);
 

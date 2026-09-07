@@ -1,6 +1,8 @@
 import { fetchPlayers } from "@/lib/data";
 import JogadoresClient from "./JogadoresClient";
 
+export const revalidate = 30;
+
 export default async function JogadoresPage() {
   const rawPlayers = await fetchPlayers();
   const players = rawPlayers.map((p: any) => ({
