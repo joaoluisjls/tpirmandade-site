@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { getSupabase } from "@/lib/supabase-browser";
-import { getCached, setCache, isCacheStale } from "@/lib/cache";
 import Link from "next/link";
 
 interface Player { id: string; nick: string; name: string; role: string; avatar: string; points: number; bio?: string; }
@@ -28,53 +27,30 @@ function PlayerCard({ player, subtitle, ring }: { player: Player; subtitle?: str
   );
 }
 
-export default function MVPClient() {
-  const [players, setPlayers] = useState<Player[]>([]);
+export default function MVPClient({ initialPlayers }: { initialPlayers: Player[] }) {
+  const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [guildMVP, setGuildMVP] = useState<Player | null>(null);
   const [guildTop3, setGuildTop3] = useState<Player[]>([]);
 
   useEffect(() => {
-    const CACHE_KEY = "players_data";
-    const cached = getCached<Player[]>(CACHE_KEY);
-
-    const apply = (all: Player[]) => {
+    getSupabase().from("players").select("id, nick, name, role, avatar, points, bio").then(({ data }) => {
+      const all = (data ?? []) as Player[];
       setPlayers(all);
-      const sorted = [...all].sort((a, b) => b.points - a.points);
       try {
         const g: GuildMVP = JSON.parse(localStorage.getItem(GUILD_KEY) || '{"mvp_id":"","top3_ids":[]}');
         if (g.mvp_id) { const p = all.find((x) => x.id === g.mvp_id); if (p) setGuildMVP(p); }
         if (g.top3_ids.length) { setGuildTop3(g.top3_ids.map((id) => all.find((x) => x.id === id)).filter(Boolean) as Player[]); }
       } catch { /* ignore */ }
-    };
-
-    const fetchFresh = () => {
-      return getSupabase().from("players").select("id, nick, name, role, avatar, points, bio").then(({ data }) => {
-        const result = (data ?? []) as Player[];
-        setCache(CACHE_KEY, result, 2 * 60 * 1000);
-        return result;
-      });
-    };
-
-    if (cached && !isCacheStale(CACHE_KEY)) {
-      apply(cached);
-      fetchFresh().then(apply, () => {});
-    } else if (cached) {
-      apply(cached);
-      fetchFresh().then(apply, () => {});
-    } else {
-      fetchFresh().then(apply);
-    }
+    });
   }, []);
 
   const sorted = [...players].sort((a, b) => b.points - a.points);
   const weekly = sorted.slice(0, 3);
-
   const medals = ["🥇", "🥈", "🥉"];
 
   return (
     <div className="pt-28 pb-20">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
-
         <h1 className="text-3xl sm:text-4xl font-black text-white text-center mb-2">🏆 MVP DA SEMANA</h1>
         <p className="text-white/30 text-center text-sm mb-10">Escolhido automaticamente por pontos</p>
 
@@ -85,11 +61,7 @@ export default function MVPClient() {
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <div className="relative shrink-0">
-                {weekly[0].avatar ? (
-                  <img src={weekly[0].avatar} alt={weekly[0].nick} className="w-32 h-32 rounded-2xl object-cover" />
-                ) : (
-                  <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-accent to-primary flex items-center justify-center text-5xl font-black text-white">{weekly[0].nick.charAt(0)}</div>
-                )}
+                {weekly[0].avatar ? (<img src={weekly[0].avatar} alt={weekly[0].nick} className="w-32 h-32 rounded-2xl object-cover" />) : (<div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-accent to-primary flex items-center justify-center text-5xl font-black text-white">{weekly[0].nick.charAt(0)}</div>)}
                 <div className="absolute -top-2 -right-2 w-10 h-10 rounded-full bg-accent flex items-center justify-center text-xl">👑</div>
               </div>
               <div className="flex-1 text-center sm:text-left">
@@ -111,11 +83,7 @@ export default function MVPClient() {
           {weekly.map((player, i) => (
             <div key={player.id} className={`rounded-2xl border p-6 text-center ${i === 0 ? "border-accent/30 bg-accent/5" : "border-white/5 bg-white/[0.02]"}`}>
               <div className="text-4xl mb-3">{medals[i]}</div>
-              {player.avatar ? (
-                <img src={player.avatar} alt={player.nick} className={`w-16 h-16 rounded-xl mx-auto mb-3 object-cover ${i === 0 ? "ring-2 ring-accent" : ""}`} />
-              ) : (
-                <div className={`w-16 h-16 rounded-xl mx-auto mb-3 flex items-center justify-center text-xl font-black text-white ${i === 0 ? "bg-gradient-to-br from-accent to-primary" : "bg-white/10"}`}>{player.nick.charAt(0)}</div>
-              )}
+              {player.avatar ? (<img src={player.avatar} alt={player.nick} className={`w-16 h-16 rounded-xl mx-auto mb-3 object-cover ${i === 0 ? "ring-2 ring-accent" : ""}`} />) : (<div className={`w-16 h-16 rounded-xl mx-auto mb-3 flex items-center justify-center text-xl font-black text-white ${i === 0 ? "bg-gradient-to-br from-accent to-primary" : "bg-white/10"}`}>{player.nick.charAt(0)}</div>)}
               <h3 className="text-lg font-black text-white mb-1">{player.nick}</h3>
               <p className="text-xs text-white/30 mb-1">{player.role}</p>
               <div className="text-sm font-bold text-primary">{player.points} pontos</div>
@@ -128,18 +96,13 @@ export default function MVPClient() {
           <>
             <h1 className="text-3xl sm:text-4xl font-black text-white text-center mb-2">👑 MVP DA GUILDA</h1>
             <p className="text-white/30 text-center text-sm mb-10">Escolhido pelo administrador</p>
-
             <div className="max-w-2xl mx-auto rounded-2xl border border-primary/20 bg-primary/5 p-8 mb-12">
               <div className="text-center mb-6">
                 <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-xs font-bold">👑 MVP DA GUILDA</span>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="relative shrink-0">
-                  {guildMVP.avatar ? (
-                    <img src={guildMVP.avatar} alt={guildMVP.nick} className="w-32 h-32 rounded-2xl object-cover" />
-                  ) : (
-                    <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-5xl font-black text-white">{guildMVP.nick.charAt(0)}</div>
-                  )}
+                  {guildMVP.avatar ? (<img src={guildMVP.avatar} alt={guildMVP.nick} className="w-32 h-32 rounded-2xl object-cover" />) : (<div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-5xl font-black text-white">{guildMVP.nick.charAt(0)}</div>)}
                   <div className="absolute -top-2 -right-2 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-xl">👑</div>
                 </div>
                 <div className="flex-1 text-center sm:text-left">
@@ -164,11 +127,7 @@ export default function MVPClient() {
               {guildTop3.map((player, i) => (
                 <div key={player.id} className={`rounded-2xl border p-6 text-center ${i === 0 ? "border-primary/30 bg-primary/5" : "border-white/5 bg-white/[0.02]"}`}>
                   <div className="text-4xl mb-3">{medals[i]}</div>
-                  {player.avatar ? (
-                    <img src={player.avatar} alt={player.nick} className={`w-16 h-16 rounded-xl mx-auto mb-3 object-cover ${i === 0 ? "ring-2 ring-primary" : ""}`} />
-                  ) : (
-                    <div className={`w-16 h-16 rounded-xl mx-auto mb-3 flex items-center justify-center text-xl font-black text-white ${i === 0 ? "bg-gradient-to-br from-primary to-accent" : "bg-white/10"}`}>{player.nick.charAt(0)}</div>
-                  )}
+                  {player.avatar ? (<img src={player.avatar} alt={player.nick} className={`w-16 h-16 rounded-xl mx-auto mb-3 object-cover ${i === 0 ? "ring-2 ring-primary" : ""}`} />) : (<div className={`w-16 h-16 rounded-xl mx-auto mb-3 flex items-center justify-center text-xl font-black text-white ${i === 0 ? "bg-gradient-to-br from-primary to-accent" : "bg-white/10"}`}>{player.nick.charAt(0)}</div>)}
                   <h3 className="text-lg font-black text-white mb-1">{player.nick}</h3>
                   <p className="text-xs text-white/30 mb-1">{player.role}</p>
                   <div className="text-sm font-bold text-primary">{player.points} pontos</div>

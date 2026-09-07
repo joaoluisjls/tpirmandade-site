@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { getSupabase } from "@/lib/supabase-browser";
-import { getCached, setCache, isCacheStale } from "@/lib/cache";
 import type { Championship } from "@/lib/bracket";
 import { BracketView, BracketViewMobile } from "@/components/BracketView";
 import { GroupTable } from "@/components/GroupTable";
@@ -41,50 +40,33 @@ const statusLabels: Record<string, string> = {
   scheduled: "Agendado",
 };
 
-export default function GuerrasClient() {
+export default function GuerrasClient({ initialWars, initialGuildName, initialGuildTag, initialChampionships }: {
+  initialWars: War[];
+  initialGuildName: string;
+  initialGuildTag: string;
+  initialChampionships: Championship[];
+}) {
   const [tab, setTab] = useState<Tab>("guerras");
   const [filter, setFilter] = useState<Filter>("todas");
-  const [wars, setWars] = useState<War[]>([]);
-  const [guild, setGuild] = useState<GuildInfo>({ name: "", tag: "" });
-  const [championships, setChampionships] = useState<Championship[]>([]);
+  const [wars, setWars] = useState<War[]>(initialWars);
+  const [guild, setGuild] = useState<GuildInfo>({ name: initialGuildName, tag: initialGuildTag });
+  const [championships, setChampionships] = useState<Championship[]>(initialChampionships);
   const [selectedChamp, setSelectedChamp] = useState<Championship | null>(null);
   const [champFilter, setChampFilter] = useState<"all" | "open" | "in_progress" | "finished">("all");
 
   useEffect(() => {
-    const CACHE_KEY = "guerras_data";
-    const cached = getCached<{ wars: War[]; guild: Record<string, string>; championships: Championship[] }>(CACHE_KEY);
-
-    const apply = (d: typeof cached) => {
-      if (!d) return;
-      setWars(d.wars);
-      setGuild({ name: d.guild.guild_name ?? "", tag: d.guild.guild_tag ?? "" });
-      setChampionships(d.championships);
-    };
-
-    const fetchFresh = () => {
-      const db = getSupabase();
-      return Promise.all([
-        db.from("wars").select("id, opponent, date, time, status, result, guild_score, opponent_score, mvp_nick"),
-        db.from("guild_settings").select("key, value"),
-        db.from("championships").select("*"),
-      ]).then(([w, s, c]) => {
-        const settings: Record<string, string> = {};
-        s.data?.forEach((item: any) => { settings[item.key] = item.value; });
-        const result = { wars: w.data ?? [], guild: settings, championships: c.data ?? [] };
-        setCache(CACHE_KEY, result, 2 * 60 * 1000);
-        return result;
-      });
-    };
-
-    if (cached && !isCacheStale(CACHE_KEY)) {
-      apply(cached);
-      fetchFresh().then(apply, () => {});
-    } else if (cached) {
-      apply(cached);
-      fetchFresh().then(apply, () => {});
-    } else {
-      fetchFresh().then(apply);
-    }
+    const db = getSupabase();
+    Promise.all([
+      db.from("wars").select("id, opponent, date, time, status, result, guild_score, opponent_score, mvp_nick"),
+      db.from("guild_settings").select("key, value"),
+      db.from("championships").select("*"),
+    ]).then(([w, s, c]) => {
+      setWars(w.data ?? []);
+      const settings: Record<string, string> = {};
+      s.data?.forEach((item: any) => { settings[item.key] = item.value; });
+      setGuild({ name: settings.guild_name ?? "", tag: settings.guild_tag ?? "" });
+      setChampionships(c.data ?? []);
+    });
   }, []);
 
   const filteredWars = useMemo(() => {

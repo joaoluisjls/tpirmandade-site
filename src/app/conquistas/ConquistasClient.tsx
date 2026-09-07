@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { getSupabase } from "@/lib/supabase-browser";
-import { getCached, setCache, isCacheStale } from "@/lib/cache";
 
 interface Achievement {
   id: string;
@@ -13,34 +12,13 @@ interface Achievement {
   responsible: string;
 }
 
-export default function ConquistasClient() {
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
+export default function ConquistasClient({ initialAchievements }: { initialAchievements: Achievement[] }) {
+  const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
 
   useEffect(() => {
-    const CACHE_KEY = "achievements_data";
-    const cached = getCached<Achievement[]>(CACHE_KEY);
-
-    const apply = (data: Achievement[] | null) => {
+    getSupabase().from("achievements").select("id, title, description, date, icon, responsible").order("date", { ascending: false }).then(({ data }) => {
       if (data) setAchievements(data);
-    };
-
-    const fetchFresh = () => {
-      return getSupabase().from("achievements").select("id, title, description, date, icon, responsible").then(({ data }) => {
-        const result = data ?? [];
-        setCache(CACHE_KEY, result, 2 * 60 * 1000);
-        return result;
-      });
-    };
-
-    if (cached && !isCacheStale(CACHE_KEY)) {
-      apply(cached);
-      fetchFresh().then(apply, () => {});
-    } else if (cached) {
-      apply(cached);
-      fetchFresh().then(apply, () => {});
-    } else {
-      fetchFresh().then(apply);
-    }
+    });
   }, []);
 
   return (

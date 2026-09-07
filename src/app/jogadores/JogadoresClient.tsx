@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { getSupabase } from "@/lib/supabase-browser";
-import { getCached, setCache, isCacheStale } from "@/lib/cache";
 import Link from "next/link";
 
 interface Player {
@@ -12,39 +11,17 @@ interface Player {
   role: string;
   avatar: string;
   status: "online" | "away" | "offline";
-  stats: { points: number };
+  points: number;
   bio?: string;
 }
 
-export default function JogadoresClient() {
-  const [players, setPlayers] = useState<Player[]>([]);
+export default function JogadoresClient({ initialPlayers }: { initialPlayers: Player[] }) {
+  const [players, setPlayers] = useState<Player[]>(initialPlayers);
 
   useEffect(() => {
-    const CACHE_KEY = "players_data";
-    const cached = getCached<Player[]>(CACHE_KEY);
-
-    const apply = (data: Player[] | null) => {
-      if (!data) return;
-      setPlayers(data.map((p: any) => ({ ...p, stats: { points: p.points } })));
-    };
-
-    const fetchFresh = () => {
-      return getSupabase().from("players").select("id, nick, name, role, avatar, status, points, bio").then(({ data }) => {
-        const result = (data ?? []) as any[];
-        setCache(CACHE_KEY, result, 2 * 60 * 1000);
-        return result;
-      });
-    };
-
-    if (cached && !isCacheStale(CACHE_KEY)) {
-      apply(cached);
-      fetchFresh().then(apply, () => {});
-    } else if (cached) {
-      apply(cached);
-      fetchFresh().then(apply, () => {});
-    } else {
-      fetchFresh().then(apply);
-    }
+    getSupabase().from("players").select("id, nick, name, role, avatar, status, points, bio").order("points", { ascending: false }).then(({ data }) => {
+      if (data) setPlayers(data);
+    });
   }, []);
 
   return (
@@ -66,7 +43,7 @@ export default function JogadoresClient() {
               <h3 className="font-bold text-white text-base mb-0.5">{player.nick}</h3>
               <p className="text-xs text-white/40 mb-3">{player.role}</p>
               <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2 text-center">
-                <div className="text-sm font-black text-primary">{player.stats.points}</div>
+                <div className="text-sm font-black text-primary">{player.points}</div>
                 <div className="text-[9px] text-white/30 uppercase">Pontos</div>
               </div>
             </Link>

@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { getSupabase } from "@/lib/supabase-browser";
-import { getCached, setCache, isCacheStale } from "@/lib/cache";
 import Link from "next/link";
 
 interface Player {
@@ -15,21 +14,16 @@ interface Player {
   points: number;
 }
 
-type PeriodType = "semana" | "mes";
-
-const PERIOD_LABELS: Record<string, string> = {
-  "2026_W37": "Sem 37 (Set 2026)",
-  "2026_W36": "Sem 36 (Set 2026)",
-  "2026_W35": "Sem 35 (Set 2026)",
-  "2026_M09": "Setembro 2026",
-  "2026_M08": "Agosto 2026",
-  "2026_M07": "Julho 2026",
-};
+interface PeriodMeta {
+  current_week: string;
+  current_month: string;
+  weeks: string[];
+  months: string[];
+}
 
 function formatPeriodLabel(key: string): string {
-  if (PERIOD_LABELS[key]) return PERIOD_LABELS[key];
   const parts = key.split("_");
-  if (parts[1]?.startsWith("W")) return `Sem ${parts[1].slice(1)}`;
+  if (parts[1]?.startsWith("W")) return `Sem ${parts[1].slice(1)} - ${parts[0]}`;
   if (parts[1]?.startsWith("M")) {
     const months = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     return `${months[parseInt(parts[1].slice(1))] || parts[1]} ${parts[0]}`;
@@ -37,82 +31,40 @@ function formatPeriodLabel(key: string): string {
   return key;
 }
 
-export default function RankingClient() {
+export default function RankingClient({ initialPlayers, initialMeta }: { initialPlayers: Player[]; initialMeta: PeriodMeta }) {
   const [search, setSearch] = useState("");
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [periodType, setPeriodType] = useState<PeriodType>("semana");
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("");
+  const [players, setPlayers] = useState<Player[]>(initialPlayers);
+  const [periodType, setPeriodType] = useState<"semana" | "mes">("semana");
+  const [selectedPeriod, setSelectedPeriod] = useState(initialMeta.current_week || "");
   const [periodPoints, setPeriodPoints] = useState<Record<string, number>>({});
-  const [availableWeeks, setAvailableWeeks] = useState<string[]>([]);
-  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [meta] = useState(initialMeta);
 
   useEffect(() => {
-    const CACHE_KEY = "ranking_data";
-    const cached = getCached<Player[]>(CACHE_KEY);
-
-    const apply = (data: Player[] | null) => {
+    getSupabase().from("players").select("id, nick, name, role, avatar, status, points").order("points", { ascending: false }).then(({ data }) => {
       if (data) setPlayers(data);
-    };
-
-    const fetchFresh = () => {
-      return getSupabase().from("players").select("id, nick, name, role, avatar, status, points").then(({ data }) => {
-        const result = data ?? [];
-        setCache(CACHE_KEY, result, 2 * 60 * 1000);
-        return result;
-      });
-    };
-
-    if (cached && !isCacheStale(CACHE_KEY)) {
-      apply(cached);
-      fetchFresh().then(apply, () => {});
-    } else if (cached) {
-      apply(cached);
-      fetchFresh().then(apply, () => {});
-    } else {
-      fetchFresh().then(apply);
-    }
-
-    // Load period metadata
-    getSupabase().from("guild_settings").select("key, value").then(({ data }) => {
-      const metaEntry = (data as any[])?.find((s) => s.key === "points_meta");
-      if (metaEntry) {
-        try {
-          const meta = JSON.parse(metaEntry.value);
-          setAvailableWeeks(meta.weeks || []);
-          setAvailableMonths(meta.months || []);
-          if (meta.current_week) setSelectedPeriod(meta.current_week);
-        } catch { /* ignore */ }
-      }
     });
   }, []);
 
   useEffect(() => {
     if (!selectedPeriod) return;
-    setLoadingHistory(true);
     getSupabase().from("guild_settings").select("key, value").then(({ data }) => {
-      const entry = (data as any[])?.find((s) => s.key === "points_history_" + selectedPeriod);
+      const arr = data as any[];
+      const entry = arr?.find((s) => s.key === "points_history_" + selectedPeriod);
       if (entry) {
         try { setPeriodPoints(JSON.parse(entry.value)); } catch { setPeriodPoints({}); }
       } else {
         setPeriodPoints({});
       }
-      setLoadingHistory(false);
     });
   }, [selectedPeriod]);
 
-  const availablePeriods = periodType === "semana" ? availableWeeks : availableMonths;
+  const availablePeriods = periodType === "semana" ? meta.weeks : meta.months;
 
   const filteredPlayers = useMemo(() => {
     let list = [...players];
-
     if (selectedPeriod && Object.keys(periodPoints).length > 0) {
-      list = list.map((p) => ({
-        ...p,
-        points: periodPoints[p.id] ?? 0,
-      }));
+      list = list.map((p) => ({ ...p, points: periodPoints[p.id] ?? 0 }));
     }
-
     list.sort((a, b) => b.points - a.points);
     if (search) list = list.filter((p) => p.nick.toLowerCase().includes(search.toLowerCase()));
     return list;
@@ -129,38 +81,30 @@ export default function RankingClient() {
           <input type="text" placeholder="Pesquisar jogador..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-64 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-primary/50" />
         </div>
 
-        {/* Period Filter */}
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 mb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex gap-2">
-              <button onClick={() => { setPeriodType("semana"); setSelectedPeriod(availableWeeks[0] || ""); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${periodType === "semana" ? "bg-primary text-white" : "bg-white/5 text-white/40 hover:bg-white/10"}`}>
-                📅 Por Semana
-              </button>
-              <button onClick={() => { setPeriodType("mes"); setSelectedPeriod(availableMonths[0] || ""); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${periodType === "mes" ? "bg-primary text-white" : "bg-white/5 text-white/40 hover:bg-white/10"}`}>
-                📆 Por Mês
-              </button>
-            </div>
-
-            {availablePeriods.length > 0 && (
-              <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50"
-              >
+        {availablePeriods.length > 0 && (
+          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex gap-2">
+                <button onClick={() => { setPeriodType("semana"); setSelectedPeriod(meta.weeks[0] || ""); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${periodType === "semana" ? "bg-primary text-white" : "bg-white/5 text-white/40 hover:bg-white/10"}`}>
+                  📅 Por Semana
+                </button>
+                <button onClick={() => { setPeriodType("mes"); setSelectedPeriod(meta.months[0] || ""); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${periodType === "mes" ? "bg-primary text-white" : "bg-white/5 text-white/40 hover:bg-white/10"}`}>
+                  📆 Por Mês
+                </button>
+              </div>
+              <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value)} className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50">
                 {availablePeriods.map((p) => (
                   <option key={p} value={p}>{formatPeriodLabel(p)}</option>
                 ))}
               </select>
-            )}
-
-            {selectedPeriod && (
-              <div className="text-sm text-white/40">
-                Total: <span className="font-bold text-primary">{totalPoints.toLocaleString()}</span> pts
-                {loadingHistory && <span className="ml-2 text-white/20">carregando...</span>}
-              </div>
-            )}
+              {selectedPeriod && (
+                <div className="text-sm text-white/40">
+                  Total: <span className="font-bold text-primary">{totalPoints.toLocaleString()}</span> pts
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="rounded-2xl border border-white/5 bg-white/[0.02] overflow-hidden">
           <div className="hidden md:block overflow-x-auto">

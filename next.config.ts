@@ -10,9 +10,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**" },
     ],
   },
-  experimental: {
-    optimizePackageImports: ["recharts"],
-  },
 };
 
 export default nextConfig;
