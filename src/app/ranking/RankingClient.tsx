@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { getSupabase } from "@/lib/supabase-browser";
 import Link from "next/link";
 
 interface Player {
@@ -18,8 +19,8 @@ export default function RankingClient() {
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    fetch("/api/players").then(r => r.json()).then((d: any[]) => {
-      setPlayers(d.map((p) => ({ id: p.id, nick: p.nick, name: p.name, role: p.role, avatar: p.avatar ?? "", status: p.status, points: p.points })));
+    getSupabase().from("players").select("id, nick, name, role, avatar, status, points").then(({ data }) => {
+      setPlayers(data ?? []);
     });
   }, []);
 

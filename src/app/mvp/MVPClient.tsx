@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getSupabase } from "@/lib/supabase-browser";
 import Link from "next/link";
 
 interface Player { id: string; nick: string; name: string; role: string; avatar: string; points: number; bio?: string; }
@@ -32,14 +33,14 @@ export default function MVPClient() {
   const [guildTop3, setGuildTop3] = useState<Player[]>([]);
 
   useEffect(() => {
-    fetch("/api/players").then(r => r.json()).then((d: any[]) => {
-      const all = d.map((p: any) => ({ id: p.id, nick: p.nick, name: p.name, role: p.role, avatar: p.avatar ?? "", points: p.points, bio: p.bio }));
+    getSupabase().from("players").select("id, nick, name, role, avatar, points, bio").then(({ data }) => {
+      const all = (data ?? []) as Player[];
       setPlayers(all);
-      const sorted = [...all].sort((a: any, b: any) => b.points - a.points);
+      const sorted = [...all].sort((a, b) => b.points - a.points);
       try {
         const g: GuildMVP = JSON.parse(localStorage.getItem(GUILD_KEY) || '{"mvp_id":"","top3_ids":[]}');
-        if (g.mvp_id) { const p = all.find((x: any) => x.id === g.mvp_id); if (p) setGuildMVP(p); }
-        if (g.top3_ids.length) { setGuildTop3(g.top3_ids.map((id: string) => all.find((x: any) => x.id === id)).filter(Boolean) as Player[]); }
+        if (g.mvp_id) { const p = all.find((x) => x.id === g.mvp_id); if (p) setGuildMVP(p); }
+        if (g.top3_ids.length) { setGuildTop3(g.top3_ids.map((id) => all.find((x) => x.id === id)).filter(Boolean) as Player[]); }
       } catch { /* ignore */ }
     });
   }, []);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getSupabase } from "@/lib/supabase-browser";
 import dynamic from "next/dynamic";
 
 const RechartsArea = dynamic(() => import("recharts").then(m => {
@@ -97,13 +98,16 @@ export default function EstatisticasClient() {
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
+    const db = getSupabase();
     Promise.all([
-      fetch("/api/players").then(r => r.json()),
-      fetch("/api/wars").then(r => r.json()),
-    ]).then(([rawPlayers, rawWars]: [any[], any[]]) => {
-      const finishedWars = rawWars.filter((w: any) => w.status === "finished");
-      const wins = rawWars.filter((w: any) => w.result === "victory").length;
-      const kills = rawPlayers.reduce((sum: number, p: any) => sum + (p.kills || 0), 0);
+      db.from("players").select("id, nick, name, role, status, kills, wins, matches"),
+      db.from("wars").select("id, result, status"),
+    ]).then(([p, w]) => {
+      const rawPlayers = p.data ?? [];
+      const rawWars = w.data ?? [];
+      const finishedWars = rawWars.filter((x: any) => x.status === "finished");
+      const wins = rawWars.filter((x: any) => x.result === "victory").length;
+      const kills = rawPlayers.reduce((sum: number, x: any) => sum + (x.kills || 0), 0);
       const warsCount = finishedWars.length;
       const winRate = warsCount > 0 ? (wins / warsCount) * 100 : 0;
       const topPlayers = [...rawPlayers].sort((a: any, b: any) => (b.matches || 0) - (a.matches || 0)).slice(0, 5);

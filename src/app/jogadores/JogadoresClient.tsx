@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getSupabase } from "@/lib/supabase-browser";
 import Link from "next/link";
 
 interface Player {
@@ -18,11 +19,9 @@ export default function JogadoresClient() {
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    fetch("/api/players").then(r => r.json()).then((d: any[]) => {
-      setPlayers(d.map((p: any) => ({
-        id: p.id, nick: p.nick, name: p.name, role: p.role,
-        avatar: p.avatar ?? "", status: p.status,
-        stats: { points: p.points }, bio: p.bio,
+    getSupabase().from("players").select("id, nick, name, role, avatar, status, points, bio").then(({ data }) => {
+      setPlayers((data ?? []).map((p: any) => ({
+        ...p, stats: { points: p.points },
       })));
     });
   }, []);

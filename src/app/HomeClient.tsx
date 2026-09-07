@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { getSupabase } from "@/lib/supabase-browser";
 
 interface Player {
   id: string;
@@ -79,18 +80,21 @@ export default function HomePageClient() {
   const [guildMVPData, setGuildMVPData] = useState<GuildMVP>({ mvp_id: "", top3_ids: [] });
 
   useEffect(() => {
+    const db = getSupabase();
     Promise.all([
-      fetch("/api/players").then(r => r.json()),
-      fetch("/api/wars").then(r => r.json()),
-      fetch("/api/achievements").then(r => r.json()),
-      fetch("/api/announcements").then(r => r.json()),
-      fetch("/api/settings").then(r => r.json()),
+      db.from("players").select("id, nick, name, role, status, points, avatar, joined_at, bio"),
+      db.from("wars").select("id, opponent, date, time, status, result, guild_score, opponent_score, mvp_nick"),
+      db.from("achievements").select("id, title, description, date, icon, responsible"),
+      db.from("announcements").select("id, title, content, date, time, priority"),
+      db.from("guild_settings").select("key, value"),
     ]).then(([p, w, a, an, s]) => {
-      setPlayers(Array.isArray(p) ? p : []);
-      setWars(Array.isArray(w) ? w : []);
-      setAchievements(Array.isArray(a) ? a : []);
-      setAnnouncements(Array.isArray(an) ? an : []);
-      setSettings(s || {});
+      setPlayers(p.data ?? []);
+      setWars(w.data ?? []);
+      setAchievements(a.data ?? []);
+      setAnnouncements(an.data ?? []);
+      const settings: Record<string, string> = {};
+      s.data?.forEach((item: any) => { settings[item.key] = item.value; });
+      setSettings(settings);
       try { setGuildMVPData(JSON.parse(localStorage.getItem(GUILD_MVP_KEY) || '{"mvp_id":"","top3_ids":[]}')); } catch { /* */ }
     }).finally(() => setLoading(false));
   }, []);
