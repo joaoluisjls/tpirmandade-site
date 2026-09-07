@@ -29,8 +29,11 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
     });
   }, []);
 
-  const owner = players.find((p) => p.nick === "CORINGA");
-  const admins = players.filter((p) => p.role === "ADM" && p.nick !== "CORINGA");
+  const ownerNick = settings.guild_owner_nick || "";
+  const adminNicks = (settings.guild_admin_nicks || "").split(",").map((s) => s.trim()).filter(Boolean);
+
+  const owner = ownerNick ? players.find((p) => p.nick === ownerNick) || null : null;
+  const admins = adminNicks.length > 0 ? players.filter((p) => adminNicks.includes(p.nick)) : [];
   const totalPoints = players.reduce((sum, p) => sum + (p.points || 0), 0);
 
   const guild = {
@@ -50,8 +53,8 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-white/60 mb-4">
             Tag: <span className="font-bold text-primary">{guild.tag}</span>
           </div>
-          <p className="text-lg text-white/50 italic max-w-xl mx-auto">&ldquo;{guild.slogan}&rdquo;</p>
-          <p className="text-sm text-primary font-bold uppercase tracking-widest mt-3">{guild.motto}</p>
+          {guild.slogan && <p className="text-lg text-white/50 italic max-w-xl mx-auto">&ldquo;{guild.slogan}&rdquo;</p>}
+          {guild.motto && <p className="text-sm text-primary font-bold uppercase tracking-widest mt-3">{guild.motto}</p>}
         </div>
 
         {guild.description && (
@@ -112,7 +115,7 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
               <div className="text-xs text-white/40 uppercase">Pontos Total</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-black text-yellow-400">1</div>
+              <div className="text-3xl font-black text-yellow-400">{owner ? 1 : 0}</div>
               <div className="text-xs text-white/40 uppercase">Dono</div>
             </div>
             <div className="text-center">
@@ -134,7 +137,7 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-white text-sm truncate">{player.nick}</span>
-                    {player.role === "ADM" && <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold">ADM</span>}
+                    {adminNicks.includes(player.nick) && <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold">ADM</span>}
                   </div>
                   <div className="text-[11px] text-white/30 truncate">{player.name}</div>
                 </div>
