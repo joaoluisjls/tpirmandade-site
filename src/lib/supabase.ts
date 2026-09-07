@@ -4,10 +4,15 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+let anonInstance: SupabaseClient | null = null;
+let serviceInstance: SupabaseClient | null = null;
+
 export function getAnonClient(): SupabaseClient {
-  return createClient(url, anonKey);
+  if (!anonInstance) anonInstance = createClient(url, anonKey);
+  return anonInstance;
 }
 
 export function getServiceClient(): SupabaseClient {
-  return createClient(url, serviceKey);
+  if (!serviceInstance) serviceInstance = createClient(url, serviceKey);
+  return serviceInstance;
 }

@@ -65,9 +65,9 @@ export default function GuerrasPage() {
   useEffect(() => {
     async function load() {
       const [warsRes, settingsRes, champsRes] = await Promise.all([
-        fetch("/api/wars", { cache: "no-store" }),
-        fetch("/api/settings", { cache: "no-store" }),
-        fetch("/api/championships", { cache: "no-store" }),
+        fetch("/api/wars"),
+        fetch("/api/settings"),
+        fetch("/api/championships"),
       ]);
       const rawWars: any[] = await warsRes.json();
       const settings: any = await settingsRes.json();

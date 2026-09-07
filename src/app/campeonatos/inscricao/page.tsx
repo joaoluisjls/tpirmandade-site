@@ -28,7 +28,7 @@ export default function InscricaoCampeonato() {
 
   const loadChamps = async () => {
     try {
-      const res = await fetch("/api/championships", { cache: "no-store" });
+      const res = await fetch("/api/championships");
       const data = await res.json();
       const open = (Array.isArray(data) ? data : []).filter((c: Championship) => c.status === "open");
       setChampionships(open);

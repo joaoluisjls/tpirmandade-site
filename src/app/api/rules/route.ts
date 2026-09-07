@@ -3,9 +3,11 @@ import { getAnonClient, getServiceClient } from "@/lib/supabase";
 
 export async function GET() {
   const supabase = getAnonClient();
-  const { data, error } = await supabase.from("rules").select("*").order("id", { ascending: true });
+  const { data, error } = await supabase.from("rules").select("id, title, content, category").order("id", { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  return NextResponse.json(data, {
+    headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=240" },
+  });
 }
 
 export async function POST(request: Request) {
