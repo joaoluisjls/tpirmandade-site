@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getSupabase } from "@/lib/supabase-browser";
+import { getCached, setCache, isCacheStale } from "@/lib/cache";
 import Link from "next/link";
 
 interface Player { id: string; nick: string; name: string; role: string; avatar: string; points: number; bio?: string; }
@@ -33,8 +34,10 @@ export default function MVPClient() {
   const [guildTop3, setGuildTop3] = useState<Player[]>([]);
 
   useEffect(() => {
-    getSupabase().from("players").select("id, nick, name, role, avatar, points, bio").then(({ data }) => {
-      const all = (data ?? []) as Player[];
+    const CACHE_KEY = "players_data";
+    const cached = getCached<Player[]>(CACHE_KEY);
+
+    const apply = (all: Player[]) => {
       setPlayers(all);
       const sorted = [...all].sort((a, b) => b.points - a.points);
       try {
@@ -42,7 +45,25 @@ export default function MVPClient() {
         if (g.mvp_id) { const p = all.find((x) => x.id === g.mvp_id); if (p) setGuildMVP(p); }
         if (g.top3_ids.length) { setGuildTop3(g.top3_ids.map((id) => all.find((x) => x.id === id)).filter(Boolean) as Player[]); }
       } catch { /* ignore */ }
-    });
+    };
+
+    const fetchFresh = () => {
+      return getSupabase().from("players").select("id, nick, name, role, avatar, points, bio").then(({ data }) => {
+        const result = (data ?? []) as Player[];
+        setCache(CACHE_KEY, result, 2 * 60 * 1000);
+        return result;
+      });
+    };
+
+    if (cached && !isCacheStale(CACHE_KEY)) {
+      apply(cached);
+      fetchFresh().then(apply, () => {});
+    } else if (cached) {
+      apply(cached);
+      fetchFresh().then(apply, () => {});
+    } else {
+      fetchFresh().then(apply);
+    }
   }, []);
 
   const sorted = [...players].sort((a, b) => b.points - a.points);

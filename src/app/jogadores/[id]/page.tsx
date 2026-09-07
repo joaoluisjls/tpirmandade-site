@@ -3,6 +3,8 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getSupabase } from "@/lib/supabase-browser";
+import { getCached, setCache, isCacheStale } from "@/lib/cache";
 
 interface WeeklyEvolution {
   week: string;
@@ -59,37 +61,57 @@ export default function PlayerProfilePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/players")
-      .then((res) => res.json())
-      .then((data: PlayerDB[]) => {
-        const found = data.find((p) => p.id === params.id);
-        if (found) {
-          const mapped: Player = {
-            id: found.id,
-            nick: found.nick,
-            name: found.name,
-            role: found.role,
-            status: found.status,
-            bio: found.bio,
-            joinedAt: found.joined_at,
-            avatar: found.avatar || "",
-            stats: {
-              matches: found.matches,
-              wins: found.wins,
-              kills: found.kills,
-              kd: found.deaths > 0 ? +(found.kills / found.deaths).toFixed(2) : 0,
-              headshotRate: found.headshot_rate,
-              avgDamage: found.avg_damage,
-              winRate: found.win_rate,
-              points: found.points,
-            },
-            weeklyEvolution: found.weekly_evolution || [],
-            achievements: found.achievements || [],
-          };
-          setPlayer(mapped);
-        }
-        setLoading(false);
+    const CACHE_KEY = "players_data";
+    const cached = getCached<PlayerDB[]>(CACHE_KEY);
+
+    const apply = (data: PlayerDB[] | null) => {
+      if (!data) return;
+      const found = data.find((p) => p.id === params.id);
+      if (found) {
+        setPlayer({
+          id: found.id,
+          nick: found.nick,
+          name: found.name,
+          role: found.role,
+          status: found.status,
+          bio: found.bio,
+          joinedAt: found.joined_at,
+          avatar: found.avatar || "",
+          stats: {
+            matches: found.matches,
+            wins: found.wins,
+            kills: found.kills,
+            kd: found.deaths > 0 ? +(found.kills / found.deaths).toFixed(2) : 0,
+            headshotRate: found.headshot_rate,
+            avgDamage: found.avg_damage,
+            winRate: found.win_rate,
+            points: found.points,
+          },
+          weeklyEvolution: found.weekly_evolution || [],
+          achievements: found.achievements || [],
+        });
+      }
+    };
+
+    const fetchFresh = () => {
+      return getSupabase().from("players").select("id, nick, name, role, status, bio, joined_at, avatar, matches, wins, kills, deaths, headshot_rate, avg_damage, win_rate, points, weekly_evolution, achievements").then(({ data }) => {
+        const result = data ?? [];
+        setCache(CACHE_KEY, result, 2 * 60 * 1000);
+        return result;
       });
+    };
+
+    if (cached && !isCacheStale(CACHE_KEY)) {
+      apply(cached);
+      setLoading(false);
+      fetchFresh().then(apply, () => {});
+    } else if (cached) {
+      apply(cached);
+      setLoading(false);
+      fetchFresh().then(apply, () => {});
+    } else {
+      fetchFresh().then(apply, () => {}).then(() => setLoading(false));
+    }
   }, [params.id]);
 
   if (loading) {

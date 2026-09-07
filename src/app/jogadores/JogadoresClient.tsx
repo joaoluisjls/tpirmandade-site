@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getSupabase } from "@/lib/supabase-browser";
+import { getCached, setCache, isCacheStale } from "@/lib/cache";
 import Link from "next/link";
 
 interface Player {
@@ -19,11 +20,31 @@ export default function JogadoresClient() {
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    getSupabase().from("players").select("id, nick, name, role, avatar, status, points, bio").then(({ data }) => {
-      setPlayers((data ?? []).map((p: any) => ({
-        ...p, stats: { points: p.points },
-      })));
-    });
+    const CACHE_KEY = "players_data";
+    const cached = getCached<Player[]>(CACHE_KEY);
+
+    const apply = (data: Player[] | null) => {
+      if (!data) return;
+      setPlayers(data.map((p: any) => ({ ...p, stats: { points: p.points } })));
+    };
+
+    const fetchFresh = () => {
+      return getSupabase().from("players").select("id, nick, name, role, avatar, status, points, bio").then(({ data }) => {
+        const result = (data ?? []) as any[];
+        setCache(CACHE_KEY, result, 2 * 60 * 1000);
+        return result;
+      });
+    };
+
+    if (cached && !isCacheStale(CACHE_KEY)) {
+      apply(cached);
+      fetchFresh().then(apply, () => {});
+    } else if (cached) {
+      apply(cached);
+      fetchFresh().then(apply, () => {});
+    } else {
+      fetchFresh().then(apply);
+    }
   }, []);
 
   return (

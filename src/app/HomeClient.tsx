@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getSupabase } from "@/lib/supabase-browser";
+import { getCached, setCache, isCacheStale } from "@/lib/cache";
 
 interface Player {
   id: string;
@@ -80,23 +81,60 @@ export default function HomePageClient() {
   const [guildMVPData, setGuildMVPData] = useState<GuildMVP>({ mvp_id: "", top3_ids: [] });
 
   useEffect(() => {
-    const db = getSupabase();
-    Promise.all([
-      db.from("players").select("id, nick, name, role, status, points, avatar, joined_at, bio"),
-      db.from("wars").select("id, opponent, date, time, status, result, guild_score, opponent_score, mvp_nick"),
-      db.from("achievements").select("id, title, description, date, icon, responsible"),
-      db.from("announcements").select("id, title, content, date, time, priority"),
-      db.from("guild_settings").select("key, value"),
-    ]).then(([p, w, a, an, s]) => {
-      setPlayers(p.data ?? []);
-      setWars(w.data ?? []);
-      setAchievements(a.data ?? []);
-      setAnnouncements(an.data ?? []);
-      const settings: Record<string, string> = {};
-      s.data?.forEach((item: any) => { settings[item.key] = item.value; });
-      setSettings(settings);
-      try { setGuildMVPData(JSON.parse(localStorage.getItem(GUILD_MVP_KEY) || '{"mvp_id":"","top3_ids":[]}')); } catch { /* */ }
-    }).finally(() => setLoading(false));
+    const CACHE_KEY = "home_data";
+    const cached = getCached<{
+      players: Player[];
+      wars: War[];
+      achievements: Achievement[];
+      announcements: Announcement[];
+      settings: Record<string, string>;
+    }>(CACHE_KEY);
+
+    const applyData = (d: typeof cached) => {
+      if (!d) return;
+      setPlayers(d.players);
+      setWars(d.wars);
+      setAchievements(d.achievements);
+      setAnnouncements(d.announcements);
+      setSettings(d.settings);
+    };
+
+    const fetchFresh = () => {
+      const db = getSupabase();
+      return Promise.all([
+        db.from("players").select("id, nick, name, role, status, points, avatar, joined_at, bio"),
+        db.from("wars").select("id, opponent, date, time, status, result, guild_score, opponent_score, mvp_nick"),
+        db.from("achievements").select("id, title, description, date, icon, responsible"),
+        db.from("announcements").select("id, title, content, date, time, priority"),
+        db.from("guild_settings").select("key, value"),
+      ]).then(([p, w, a, an, s]) => {
+        const settings: Record<string, string> = {};
+        s.data?.forEach((item: any) => { settings[item.key] = item.value; });
+        const result = {
+          players: p.data ?? [],
+          wars: w.data ?? [],
+          achievements: a.data ?? [],
+          announcements: an.data ?? [],
+          settings,
+        };
+        setCache(CACHE_KEY, result, 2 * 60 * 1000);
+        return result;
+      });
+    };
+
+    if (cached && !isCacheStale(CACHE_KEY)) {
+      applyData(cached);
+      setLoading(false);
+      fetchFresh().then(applyData, () => {});
+    } else if (cached) {
+      applyData(cached);
+      setLoading(false);
+      fetchFresh().then(applyData, () => {});
+    } else {
+      fetchFresh().then(applyData, () => {}).then(() => setLoading(false));
+    }
+
+    try { setGuildMVPData(JSON.parse(localStorage.getItem(GUILD_MVP_KEY) || '{"mvp_id":"","top3_ids":[]}')); } catch { /* */ }
   }, []);
 
   if (loading) {

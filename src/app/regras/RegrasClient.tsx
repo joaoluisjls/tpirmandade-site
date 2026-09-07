@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getSupabase } from "@/lib/supabase-browser";
+import { getCached, setCache, isCacheStale } from "@/lib/cache";
 
 interface Rule {
   id: string;
@@ -21,9 +22,30 @@ export default function RegrasClient() {
   const [rules, setRules] = useState<Rule[]>([]);
 
   useEffect(() => {
-    getSupabase().from("rules").select("id, title, content, category").then(({ data }) => {
-      setRules(data ?? []);
-    });
+    const CACHE_KEY = "rules_data";
+    const cached = getCached<Rule[]>(CACHE_KEY);
+
+    const apply = (data: Rule[] | null) => {
+      if (data) setRules(data);
+    };
+
+    const fetchFresh = () => {
+      return getSupabase().from("rules").select("id, title, content, category").then(({ data }) => {
+        const result = data ?? [];
+        setCache(CACHE_KEY, result, 2 * 60 * 1000);
+        return result;
+      });
+    };
+
+    if (cached && !isCacheStale(CACHE_KEY)) {
+      apply(cached);
+      fetchFresh().then(apply, () => {});
+    } else if (cached) {
+      apply(cached);
+      fetchFresh().then(apply, () => {});
+    } else {
+      fetchFresh().then(apply);
+    }
   }, []);
 
   return (

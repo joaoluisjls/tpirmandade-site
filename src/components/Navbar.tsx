@@ -10,7 +10,7 @@ const ALL_NAV_LINKS = [
   { href: "/mvp", label: "MVP" },
   { href: "/jogadores", label: "Jogadores" },
   { href: "/guerras", label: "Guerras" },
-  { href: "/estatisticas", label: "Estatísticas" },
+  { href: "/estatisticas", label: "Guilda" },
   { href: "/conquistas", label: "Conquistas" },
   { href: "/regras", label: "Regras" },
   { href: "/recrutamento", label: "Recrutamento", publicOnly: true },
