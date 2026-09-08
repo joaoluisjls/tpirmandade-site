@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSupabase } from "@/lib/supabase-browser";
 
 interface Player {
   id: string;
@@ -24,13 +23,8 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
   const [settings, setSettings] = useState<GuildSettings>(initialSettings);
 
   useEffect(() => {
-    const supabase = getSupabase();
-    supabase.from("guild_settings").select("key, value").then(({ data }) => {
-      if (data) {
-        const map: GuildSettings = {};
-        data.forEach((item: any) => { map[item.key] = item.value; });
-        setSettings(map);
-      }
+    fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()).then((s) => {
+      setSettings(s);
     });
   }, []);
 
