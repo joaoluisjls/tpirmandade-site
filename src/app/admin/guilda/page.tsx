@@ -27,14 +27,24 @@ export default function AdminGuildaPage() {
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/settings").then((r) => r.json()),
-      fetch("/api/players").then((r) => r.json()),
-    ]).then(([s, p]) => {
-      setSettings(s);
-      setPlayers(Array.isArray(p) ? p : []);
+    const load = async () => {
+      try {
+        const [settingsRes, playersRes] = await Promise.all([
+          fetch("/api/settings", { cache: "no-store" }),
+          fetch("/api/players", { cache: "no-store" }),
+        ]);
+        const s = await settingsRes.json();
+        const p = await playersRes.json();
+        console.log("Settings:", s);
+        console.log("Players:", p);
+        setSettings(s);
+        setPlayers(Array.isArray(p) ? p : []);
+      } catch (err: any) {
+        console.error("Fetch error:", err);
+      }
       setLoading(false);
-    });
+    };
+    load();
   }, []);
 
   const update = (key: string, value: string) => setSettings({ ...settings, [key]: value });
