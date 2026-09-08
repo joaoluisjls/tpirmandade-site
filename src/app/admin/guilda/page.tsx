@@ -30,9 +30,15 @@ export default function AdminGuildaPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const settingsRes = await fetch("/api/settings", { cache: "no-store" });
-        const s = await settingsRes.json();
-        setSettings(s);
+        const [settingsRes, leadersRes] = await Promise.all([
+          fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()),
+          fetch("/api/guild-leaders", { cache: "no-store" }).then((r) => r.json()),
+        ]);
+        setSettings({
+          ...settingsRes,
+          guild_owner_nick: leadersRes.owner || "",
+          guild_admin_nicks: leadersRes.admins ? leadersRes.admins.join(", ") : "",
+        });
 
         const { data: playersData, error } = await getSupabase()
           .from("players")
@@ -53,36 +59,40 @@ export default function AdminGuildaPage() {
 
   const save = async () => {
     setSaving(true);
-    const payload = {
-      guild_name: settings.guild_name || "",
-      guild_tag: settings.guild_tag || "",
-      guild_slogan: settings.guild_slogan || "",
-      guild_motto: settings.guild_motto || "",
-      guild_description: settings.guild_description || "",
-      discord: settings.discord || "",
-      instagram: settings.instagram || "",
-      tiktok: settings.tiktok || "",
-      youtube: settings.youtube || "",
-      whatsapp: settings.whatsapp || "",
-      guild_owner_nick: settings.guild_owner_nick || "",
-      guild_admin_nicks: settings.guild_admin_nicks || "",
-    };
-    console.log("Saving guild settings:", payload);
-    const res = await fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    console.log("Save response:", data);
+    try {
+      const settingsPayload = {
+        guild_name: settings.guild_name || "",
+        guild_tag: settings.guild_tag || "",
+        guild_slogan: settings.guild_slogan || "",
+        guild_motto: settings.guild_motto || "",
+        guild_description: settings.guild_description || "",
+        discord: settings.discord || "",
+        instagram: settings.instagram || "",
+        tiktok: settings.tiktok || "",
+        youtube: settings.youtube || "",
+        whatsapp: settings.whatsapp || "",
+      };
+      await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settingsPayload),
+      });
 
-    for (const [key, value] of Object.entries(payload)) {
-      await getSupabase().from("guild_settings").upsert({ key, value: String(value) });
+      await fetch("/api/guild-leaders", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner: settings.guild_owner_nick || "",
+          admins: (settings.guild_admin_nicks || "").split(",").map((s) => s.trim()).filter(Boolean),
+        }),
+      });
+
+      setToast("Informações da guilda salvas!");
+    } catch (err) {
+      console.error("Save error:", err);
+      setToast("Erro ao salvar!");
     }
-    console.log("Direct Supabase save done");
-
     setSaving(false);
-    setToast("Informações da guilda salvas!");
   };
 
   const ownerNick = settings.guild_owner_nick || "";

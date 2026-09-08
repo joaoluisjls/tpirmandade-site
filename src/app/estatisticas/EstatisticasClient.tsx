@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { getSupabase } from "@/lib/supabase-browser";
+import { useState } from "react";
 
 interface Player {
   id: string;
@@ -19,21 +18,21 @@ interface GuildSettings {
   [key: string]: string;
 }
 
-export default function EstatisticasClient({ initialPlayers, initialSettings }: { initialPlayers: Player[]; initialSettings: GuildSettings }) {
-  const [players, setPlayers] = useState<Player[]>(initialPlayers);
-  const [settings, setSettings] = useState<GuildSettings>(initialSettings);
-
-  useEffect(() => {
-    fetch("/api/settings", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((s) => {
-        if (s && !s.error) setSettings(s);
-      })
-      .catch(() => {});
-  }, []);
-
-  const ownerNick = settings.guild_owner_nick || "";
-  const adminNicks = (settings.guild_admin_nicks || "").split(",").map((s) => s.trim()).filter(Boolean);
+export default function EstatisticasClient({
+  initialPlayers,
+  initialSettings,
+  initialOwner,
+  initialAdmins,
+}: {
+  initialPlayers: Player[];
+  initialSettings: GuildSettings;
+  initialOwner: string;
+  initialAdmins: string[];
+}) {
+  const [players] = useState<Player[]>(initialPlayers);
+  const [settings] = useState<GuildSettings>(initialSettings);
+  const [ownerNick] = useState(initialOwner);
+  const [adminNicks] = useState(initialAdmins);
 
   const owner = ownerNick ? players.find((p) => p.nick === ownerNick) || null : null;
   const admins = adminNicks.length > 0 ? players.filter((p) => adminNicks.includes(p.nick)) : [];
