@@ -43,5 +43,5 @@ export async function PUT(request: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, owner, admins: adminStr.split(",").map((s) => s.trim()).filter(Boolean) });
+  return NextResponse.json({ ok: true, owner, admins: adminStr.split(",").map((s: string) => s.trim()).filter((s: string) => Boolean(s)) });
 }
