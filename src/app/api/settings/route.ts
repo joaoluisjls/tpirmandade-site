@@ -15,9 +15,32 @@ export async function GET() {
 export async function PUT(request: Request) {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
-  const updates = Object.entries(body).map(([key, value]) =>
-    supabase.from("guild_settings").upsert({ key, value: String(value) })
-  );
-  await Promise.all(updates);
+  const errors: string[] = [];
+
+  for (const [key, value] of Object.entries(body)) {
+    const strValue = String(value);
+    const { data: existing } = await supabase
+      .from("guild_settings")
+      .select("id")
+      .eq("key", key)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabase
+        .from("guild_settings")
+        .update({ value: strValue })
+        .eq("key", key);
+      if (error) errors.push(`${key}: ${error.message}`);
+    } else {
+      const { error } = await supabase
+        .from("guild_settings")
+        .insert({ key, value: strValue });
+      if (error) errors.push(`${key}: ${error.message}`);
+    }
+  }
+
+  if (errors.length > 0) {
+    return NextResponse.json({ ok: false, errors }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

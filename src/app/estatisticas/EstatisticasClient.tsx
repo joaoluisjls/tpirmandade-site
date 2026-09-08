@@ -24,24 +24,12 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
   const [settings, setSettings] = useState<GuildSettings>(initialSettings);
 
   useEffect(() => {
-    const supabase = getSupabase();
-    Promise.all([
-      supabase.from("guild_settings").select("key, value"),
-      fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()),
-    ]).then(([directRes, apiSettings]) => {
-      const merged: GuildSettings = { ...initialSettings };
-      if (directRes.data) {
-        directRes.data.forEach((item: any) => { merged[item.key] = item.value; });
-      }
-      if (apiSettings && !apiSettings.error) {
-        Object.assign(merged, apiSettings);
-      }
-      setSettings(merged);
-    }).catch(() => {
-      fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()).then((s) => {
+    fetch("/api/settings", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((s) => {
         if (s && !s.error) setSettings(s);
-      });
-    });
+      })
+      .catch(() => {});
   }, []);
 
   const ownerNick = settings.guild_owner_nick || "";
