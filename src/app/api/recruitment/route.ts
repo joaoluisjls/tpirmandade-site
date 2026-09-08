@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 export async function GET() {
-  const supabase = getServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const { data, error } = await supabase
     .from("recruitment_requests")
     .select("*")
@@ -12,7 +12,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = getServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
   const { data, error } = await supabase
     .from("recruitment_requests")
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const supabase = getServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
   const { id, ...updates } = body;
   const { data, error } = await supabase
@@ -38,7 +38,7 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = getServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const { id } = await request.json();
   const { error } = await supabase
     .from("recruitment_requests")

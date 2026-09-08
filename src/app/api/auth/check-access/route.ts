@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getServiceClient, getAnonClient } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
-  const supabase = getServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const { email } = await request.json();
 
   if (!email) {
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const supabase = getAnonClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const url = new URL(request.url);
   const email = url.searchParams.get("email");
 

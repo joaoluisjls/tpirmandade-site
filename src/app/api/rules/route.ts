@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getAnonClient, getServiceClient } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 export async function GET() {
-  const supabase = getAnonClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const { data, error } = await supabase.from("rules").select("id, title, content, category").order("id", { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, {
@@ -11,7 +11,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = getServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
   const { data, error } = await supabase.from("rules").insert(body).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const supabase = getServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
   const { id, ...updates } = body;
   const { data, error } = await supabase.from("rules").update(updates).eq("id", id).select().single();
@@ -28,7 +28,7 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = getServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const { id } = await request.json();
   const { error } = await supabase.from("rules").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

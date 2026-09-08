@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getServiceClient, getAnonClient } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 export async function GET() {
-  const supabase = getAnonClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const { data, error } = await supabase
     .from("guild_settings")
     .select("key, value")
@@ -23,7 +23,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = getServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
 
   const id = `champ_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const supabase = getServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
   const { id, ...updates } = body;
 
@@ -80,7 +80,7 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = getServiceClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
 

@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
-const supabase = getServiceClient();
+function getClient() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+}
 
 function getKey(championshipId: string) {
   return `championship_subs:${championshipId}`;
 }
 
 async function getSubscriptions(championshipId: string) {
+  const supabase = getClient();
   const { data } = await supabase.from("guild_settings").select("value").eq("key", getKey(championshipId)).single();
   return (data?.value as any[]) || [];
 }
 
 async function saveSubscriptions(championshipId: string, subs: any[]) {
+  const supabase = getClient();
   const key = getKey(championshipId);
   const { data: existing } = await supabase.from("guild_settings").select("id").eq("key", key).single();
   if (existing) {

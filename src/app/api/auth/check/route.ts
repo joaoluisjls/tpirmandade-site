@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAnonClient } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 export async function GET(request: Request) {
   const cookieHeader = request.headers.get("cookie") || "";
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ authenticated: false });
   }
 
-  const supabase = getAnonClient();
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const { data: { user }, error } = await supabase.auth.getUser(accessToken);
 
   if (error || !user) {
