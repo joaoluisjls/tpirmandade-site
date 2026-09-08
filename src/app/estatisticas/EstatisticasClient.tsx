@@ -64,44 +64,55 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {owner && (
-            <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-2xl">👑</span>
-                <h3 className="text-lg font-bold text-yellow-400">DONO DA GUILDA</h3>
-              </div>
-              <div className="flex items-center gap-4">
-                {owner.avatar ? (<img src={owner.avatar} alt={owner.nick} className="w-16 h-16 rounded-xl object-cover ring-2 ring-yellow-500/30" />) : (<div className="w-16 h-16 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-2xl font-black text-white">{owner.nick.charAt(0)}</div>)}
-                <div>
-                  <div className="text-lg font-black text-white">{owner.nick}</div>
-                  <div className="text-sm text-white/40">{owner.name}</div>
-                  <div className="text-xs text-white/30 mt-1">{owner.points?.toLocaleString()} pontos</div>
-                </div>
-              </div>
-            </div>
-          )}
+        {(owner || admins.length > 0) && (
+          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-8 mb-8">
+            <h2 className="text-lg font-bold text-white mb-8 text-center">LIDERANÇA</h2>
 
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-2xl">🛡️</span>
-              <h3 className="text-lg font-bold text-primary">ADMINISTRADORES</h3>
-            </div>
-            {admins.length > 0 ? (
-              <div className="space-y-3">
-                {admins.map((admin) => (
-                  <div key={admin.id} className="flex items-center gap-3">
-                    {admin.avatar ? (<img src={admin.avatar} alt={admin.nick} className="w-12 h-12 rounded-lg object-cover" />) : (<div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center text-lg font-bold text-white">{admin.nick.charAt(0)}</div>)}
-                    <div>
-                      <div className="font-bold text-white text-sm">{admin.nick}</div>
-                      <div className="text-xs text-white/40">{admin.name}</div>
-                    </div>
+            <div className="flex flex-col items-center gap-6">
+              {owner && (
+                <div className="flex flex-col items-center">
+                  <div className="relative mb-3">
+                    {owner.avatar ? (
+                      <img src={owner.avatar} alt={owner.nick} className="w-24 h-24 rounded-2xl object-cover ring-4 ring-yellow-500/30 shadow-lg shadow-yellow-500/10" />
+                    ) : (
+                      <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-4xl font-black text-white shadow-lg shadow-yellow-500/10">{owner.nick.charAt(0)}</div>
+                    )}
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-yellow-500/20 border border-yellow-500/30 text-[10px] font-bold text-yellow-400 uppercase tracking-wider">👑 DONO</div>
                   </div>
-                ))}
-              </div>
-            ) : <p className="text-sm text-white/30">Nenhum administrador definido</p>}
+                  <div className="text-center mt-2">
+                    <div className="text-xl font-black text-white">{owner.nick}</div>
+                    <div className="text-sm text-white/40">{owner.name}</div>
+                    {owner.points != null && <div className="text-xs text-primary font-bold mt-1">{owner.points.toLocaleString()} pontos</div>}
+                  </div>
+                </div>
+              )}
+
+              {admins.length > 0 && (
+                <>
+                  <div className="w-32 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                  <div className="flex flex-wrap justify-center gap-6">
+                    {admins.map((admin) => (
+                      <div key={admin.id} className="flex flex-col items-center">
+                        <div className="relative mb-2">
+                          {admin.avatar ? (
+                            <img src={admin.avatar} alt={admin.nick} className="w-16 h-16 rounded-xl object-cover ring-2 ring-primary/30 shadow-lg shadow-primary/10" />
+                          ) : (
+                            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary to-red-500 flex items-center justify-center text-xl font-black text-white shadow-lg shadow-primary/10">{admin.nick.charAt(0)}</div>
+                          )}
+                          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-[8px] font-bold text-primary uppercase tracking-wider">ADM</div>
+                        </div>
+                        <div className="text-center mt-1">
+                          <div className="text-sm font-black text-white">{admin.nick}</div>
+                          <div className="text-[11px] text-white/30">{admin.name}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 mb-8">
           <h2 className="text-lg font-bold text-white mb-4">📊 RESUMO</h2>
