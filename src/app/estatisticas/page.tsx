@@ -10,14 +10,12 @@ export const metadata: Metadata = {
 };
 
 export default async function EstatisticasPage() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
   const [p, s] = await Promise.all([
     supabase.from("players").select("id, nick, name, role, avatar, status, points, joined_at, bio").order("points", { ascending: false }),
     supabase.from("guild_settings").select("key, value"),
   ]);
-
-  if (p.error) console.error("EstatisticasPage error:", p.error.message);
 
   const settingsMap: Record<string, string> = {};
   s.data?.forEach((item: any) => { settingsMap[item.key] = item.value; });

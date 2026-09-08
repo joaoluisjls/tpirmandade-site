@@ -25,9 +25,6 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
 
   useEffect(() => {
     const supabase = getSupabase();
-    supabase.from("players").select("id, nick, name, role, avatar, status, points, joined_at, bio").order("points", { ascending: false }).then(({ data }) => {
-      if (data) setPlayers(data as Player[]);
-    });
     supabase.from("guild_settings").select("key, value").then(({ data }) => {
       if (data) {
         const map: GuildSettings = {};
