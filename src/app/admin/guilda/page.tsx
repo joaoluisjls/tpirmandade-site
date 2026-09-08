@@ -53,11 +53,34 @@ export default function AdminGuildaPage() {
 
   const save = async () => {
     setSaving(true);
-    await fetch("/api/settings", {
+    const payload = {
+      guild_name: settings.guild_name || "",
+      guild_tag: settings.guild_tag || "",
+      guild_slogan: settings.guild_slogan || "",
+      guild_motto: settings.guild_motto || "",
+      guild_description: settings.guild_description || "",
+      discord: settings.discord || "",
+      instagram: settings.instagram || "",
+      tiktok: settings.tiktok || "",
+      youtube: settings.youtube || "",
+      whatsapp: settings.whatsapp || "",
+      guild_owner_nick: settings.guild_owner_nick || "",
+      guild_admin_nicks: settings.guild_admin_nicks || "",
+    };
+    console.log("Saving guild settings:", payload);
+    const res = await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(settings),
+      body: JSON.stringify(payload),
     });
+    const data = await res.json();
+    console.log("Save response:", data);
+
+    for (const [key, value] of Object.entries(payload)) {
+      await getSupabase().from("guild_settings").upsert({ key, value: String(value) });
+    }
+    console.log("Direct Supabase save done");
+
     setSaving(false);
     setToast("Informações da guilda salvas!");
   };

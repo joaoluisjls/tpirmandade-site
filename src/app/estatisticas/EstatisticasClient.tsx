@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getSupabase } from "@/lib/supabase-browser";
 
 interface Player {
   id: string;
@@ -23,8 +24,23 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
   const [settings, setSettings] = useState<GuildSettings>(initialSettings);
 
   useEffect(() => {
-    fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()).then((s) => {
-      setSettings(s);
+    const supabase = getSupabase();
+    Promise.all([
+      supabase.from("guild_settings").select("key, value"),
+      fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()),
+    ]).then(([directRes, apiSettings]) => {
+      const merged: GuildSettings = { ...initialSettings };
+      if (directRes.data) {
+        directRes.data.forEach((item: any) => { merged[item.key] = item.value; });
+      }
+      if (apiSettings && !apiSettings.error) {
+        Object.assign(merged, apiSettings);
+      }
+      setSettings(merged);
+    }).catch(() => {
+      fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()).then((s) => {
+        if (s && !s.error) setSettings(s);
+      });
     });
   }, []);
 
