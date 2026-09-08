@@ -1,36 +1,40 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-function getClient() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+function sbHeaders() {
+  return {
+    "apikey": SUPABASE_KEY,
+    "Authorization": `Bearer ${SUPABASE_KEY}`,
+    "Content-Type": "application/json",
+  };
 }
 
 export async function GET() {
-  const supabase = getClient();
-  const { data, error } = await supabase.from("guild_settings").select("key, value").in("key", ["guild_owner_nick", "guild_admin_nicks"]);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/guild_settings?select=key,value&key=in.(guild_owner_nick,guild_admin_nicks)`, { headers: sbHeaders() });
+  if (!res.ok) return NextResponse.json({ error: "fetch failed" }, { status: 500 });
+  const data: { key: string; value: string }[] = await res.json();
   const map: Record<string, string> = {};
   data?.forEach((r) => { map[r.key] = r.value; });
-
   return NextResponse.json({
     owner: map.guild_owner_nick || "",
-    admins: map.guild_admin_nicks ? map.guild_admin_nicks.split(",").map((s) => s.trim()).filter(Boolean) : [],
+    admins: map.guild_admin_nicks ? map.guild_admin_nicks.split(",").map((s: string) => s.trim()).filter((s: string) => Boolean(s)) : [],
   });
 }
 
 export async function PUT(request: Request) {
-  const supabase = getClient();
   const body = await request.json();
   const { owner = "", admins = [] } = body;
+  const adminStr: string = Array.isArray(admins) ? admins.join(", ") : admins;
 
-  const adminStr = Array.isArray(admins) ? admins.join(", ") : admins;
-
-  const keysToDelete = ["guild_owner_nick", "guild_admin_nicks"];
-  for (const key of keysToDelete) {
-    await supabase.from("guild_settings").delete().eq("key", key);
+  for (const key of ["guild_owner_nick", "guild_admin_nicks"]) {
+    await fetch(`${SUPABASE_URL}/rest/v1/guild_settings?key=eq.${key}`, {
+      method: "DELETE",
+      headers: sbHeaders(),
+    });
   }
 
   const inserts = [
@@ -39,8 +43,12 @@ export async function PUT(request: Request) {
   ].filter((r) => r.value);
 
   if (inserts.length > 0) {
-    const { error } = await supabase.from("guild_settings").insert(inserts);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/guild_settings`, {
+      method: "POST",
+      headers: sbHeaders(),
+      body: JSON.stringify(inserts),
+    });
+    if (!res.ok) return NextResponse.json({ error: "insert failed" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, owner, admins: adminStr.split(",").map((s: string) => s.trim()).filter((s: string) => Boolean(s)) });
