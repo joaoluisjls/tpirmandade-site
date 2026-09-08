@@ -21,11 +21,19 @@ interface GuildSettings {
 
 export default function EstatisticasClient({ initialPlayers, initialSettings }: { initialPlayers: Player[]; initialSettings: GuildSettings }) {
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
-  const [settings] = useState<GuildSettings>(initialSettings);
+  const [settings, setSettings] = useState<GuildSettings>(initialSettings);
 
   useEffect(() => {
-    getSupabase().from("players").select("id, nick, name, role, avatar, status, points, joined_at, bio").order("points", { ascending: false }).then(({ data }) => {
+    const supabase = getSupabase();
+    supabase.from("players").select("id, nick, name, role, avatar, status, points, joined_at, bio").order("points", { ascending: false }).then(({ data }) => {
       if (data) setPlayers(data as Player[]);
+    });
+    supabase.from("guild_settings").select("key, value").then(({ data }) => {
+      if (data) {
+        const map: GuildSettings = {};
+        data.forEach((item: any) => { map[item.key] = item.value; });
+        setSettings(map);
+      }
     });
   }, []);
 
@@ -44,6 +52,14 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
     description: settings.guild_description || "",
   };
 
+  const socials = [
+    { key: "discord", icon: "💬", label: "Discord" },
+    { key: "instagram", icon: "📷", label: "Instagram" },
+    { key: "tiktok", icon: "🎵", label: "TikTok" },
+    { key: "youtube", icon: "🎬", label: "YouTube" },
+    { key: "whatsapp", icon: "📱", label: "WhatsApp" },
+  ].filter((s) => settings[s.key]);
+
   return (
     <div className="pt-28 pb-20">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -60,14 +76,13 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
         {guild.description && (
           <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 mb-8">
             <h2 className="text-lg font-bold text-white mb-3">📖 SOBRE A GUILDA</h2>
-            <p className="text-sm text-white/50 leading-relaxed">{guild.description}</p>
+            <p className="text-sm text-white/50 leading-relaxed whitespace-pre-line">{guild.description}</p>
           </div>
         )}
 
         {(owner || admins.length > 0) && (
           <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-8 mb-8">
             <h2 className="text-lg font-bold text-white mb-8 text-center">LIDERANÇA</h2>
-
             <div className="flex flex-col items-center gap-6">
               {owner && (
                 <div className="flex flex-col items-center">
@@ -86,7 +101,6 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
                   </div>
                 </div>
               )}
-
               {admins.length > 0 && (
                 <>
                   <div className="w-32 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
@@ -136,6 +150,20 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
           </div>
         </div>
 
+        {socials.length > 0 && (
+          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 mb-8">
+            <h2 className="text-lg font-bold text-white mb-4">🔗 REDES SOCIAIS</h2>
+            <div className="space-y-2">
+              {socials.map((s) => (
+                <div key={s.key} className="flex items-center gap-3 text-sm text-white/50">
+                  <span className="text-lg">{s.icon}</span>
+                  <span>{settings[s.key]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6">
           <h2 className="text-lg font-bold text-white mb-4">👥 TODOS OS MEMBROS ({players.length})</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -148,6 +176,7 @@ export default function EstatisticasClient({ initialPlayers, initialSettings }: 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-white text-sm truncate">{player.nick}</span>
+                    {ownerNick === player.nick && <span className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-bold">DONO</span>}
                     {adminNicks.includes(player.nick) && <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold">ADM</span>}
                   </div>
                   <div className="text-[11px] text-white/30 truncate">{player.name}</div>
