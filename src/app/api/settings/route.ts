@@ -13,12 +13,20 @@ function sbHeaders() {
   };
 }
 
+const ADMIN_KEYS = [
+  "guild_name", "guild_tag", "guild_slogan", "guild_motto", "guild_description",
+  "discord", "instagram", "tiktok", "youtube", "whatsapp",
+];
+
 export async function GET() {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/guild_settings?select=key,value`, { headers: sbHeaders() });
-  if (!res.ok) return NextResponse.json({ error: "fetch failed" }, { status: 500 });
-  const data: { key: string; value: string }[] = await res.json();
+  const allRes = await fetch(`${SUPABASE_URL}/rest/v1/guild_settings?select=key,value`, { headers: sbHeaders() });
+  if (!allRes.ok) return NextResponse.json({ error: "fetch failed" }, { status: 500 });
+  const allData: { key: string; value: string }[] = await allRes.json();
   const settings: Record<string, string> = {};
-  data?.forEach((s) => { settings[s.key] = s.value; });
+  ADMIN_KEYS.forEach((k) => {
+    const row = allData.find((r) => r.key === k);
+    if (row) settings[k] = row.value;
+  });
   return NextResponse.json(settings);
 }
 
