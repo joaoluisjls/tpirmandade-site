@@ -17,6 +17,7 @@ const MENU = [
   { href: "/admin/regras", label: "Regras", icon: "📜" },
   { href: "/admin/configuracoes", label: "Configurações", icon: "⚙️" },
   { href: "/admin/guilda", label: "Guilda", icon: "🏰" },
+  { href: "/admin/points", label: "Pontos", icon: "📊" },
   { href: "/admin/admins", label: "Administradores", icon: "👑" },
 ];
 
