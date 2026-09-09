@@ -39,12 +39,11 @@ export default function AdminPointsPage() {
 
     for (const line of lines) {
       const trimmed = line.trim();
-      const match = trimmed.match(/^(.+?)\s+(\d+)\s*(.*)$/);
+      const match = trimmed.match(/^(\S+)\s+(\d+)/);
       if (!match) continue;
 
-      const rawNick = match[1].trim();
+      const rawNick = match[1];
       const pts = parseInt(match[2], 10);
-
       const canonicalNick = nickToLower.get(rawNick.toLowerCase()) || rawNick;
       results.push({ nick: canonicalNick, points: pts, type: "individual" });
     }
