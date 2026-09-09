@@ -1,17 +1,20 @@
 import HomePageClient from "./HomeClient";
 import { createClient } from "@supabase/supabase-js";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function HomePage() {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
+  const adminKeys = ["guild_name", "guild_tag", "discord", "instagram", "tiktok", "youtube", "whatsapp"];
+  const keyList = adminKeys.map((k) => `key=eq.${k}`).join(",");
+
   const [p, w, a, an, s] = await Promise.all([
-    supabase.from("players").select("id, nick, name, role, status, points, avatar, joined_at, bio"),
-    supabase.from("wars").select("id, opponent, date, time, status, result, guild_score, opponent_score, mvp_nick"),
-    supabase.from("achievements").select("id, title, description, date, icon, responsible"),
-    supabase.from("announcements").select("id, title, content, date, time, priority"),
-    supabase.from("guild_settings").select("key, value"),
+    supabase.from("players").select("id, nick, name, role, status, points, avatar").limit(10),
+    supabase.from("wars").select("id, opponent, date, time, status, result, guild_score, opponent_score, mvp_nick").limit(5),
+    supabase.from("achievements").select("id, title, description, date, icon, responsible").limit(5),
+    supabase.from("announcements").select("id, title, content, date, time, priority").limit(5),
+    supabase.from("guild_settings").select("key, value").in("key", adminKeys),
   ]);
 
   if (p.error) console.error("HomePage players error:", p.error.message);

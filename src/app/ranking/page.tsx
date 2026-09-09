@@ -1,28 +1,19 @@
 import RankingClient from "./RankingClient";
 import { createClient } from "@supabase/supabase-js";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function RankingPage() {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
-  const { data: players, error } = await supabase
-    .from("players")
-    .select("id, nick, name, role, avatar, status, points")
-    .order("points", { ascending: false });
+  const [players, metaRes] = await Promise.all([
+    supabase.from("players").select("id, nick, name, role, avatar, status, points").order("points", { ascending: false }),
+    supabase.from("guild_settings").select("key, value").eq("key", "points_meta"),
+  ]);
 
-  if (error) console.error("RankingPage error:", error.message);
-
-  const { data: settingsData } = await supabase
-    .from("guild_settings")
-    .select("key, value");
-
-  const settingsMap: Record<string, string> = {};
-  settingsData?.forEach((s: any) => { settingsMap[s.key] = s.value; });
-
-  const metaRaw = settingsMap.points_meta;
+  const metaRaw = metaRes.data?.[0]?.value;
   let meta = { current_week: "", current_month: "", weeks: [] as string[], months: [] as string[] };
   try { if (metaRaw) meta = JSON.parse(metaRaw); } catch {}
 
-  return <RankingClient initialPlayers={players ?? []} initialMeta={meta} />;
+  return <RankingClient initialPlayers={players.data ?? []} initialMeta={meta} />;
 }

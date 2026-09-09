@@ -1,7 +1,7 @@
 import ConquistasClient from "./ConquistasClient";
 import { createClient } from "@supabase/supabase-js";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function ConquistasPage() {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
@@ -9,7 +9,8 @@ export default async function ConquistasPage() {
   const { data: achievements, error } = await supabase
     .from("achievements")
     .select("id, title, description, date, icon, responsible")
-    .order("date", { ascending: false });
+    .order("date", { ascending: false })
+    .limit(50);
 
   if (error) console.error("ConquistasPage error:", error.message);
 

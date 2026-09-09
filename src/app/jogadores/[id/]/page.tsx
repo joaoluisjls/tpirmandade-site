@@ -2,7 +2,7 @@ import PlayerProfileClient from "./PlayerProfileClient";
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function PlayerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,9 +19,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
 
   const { data: settingsData } = await supabase
     .from("guild_settings")
-    .select("key, value")
-    .eq("key", "points_total")
-    .single();
+    .select("value").eq("key", "points_total").single();
 
   const pointsTotal = settingsData ? JSON.parse(settingsData.value) : 0;
 
