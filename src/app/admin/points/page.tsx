@@ -20,6 +20,7 @@ export default function AdminPointsPage() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
   const [pasteText, setPasteText] = useState("");
+  const [selectedType, setSelectedType] = useState<"semana" | "individual" | "total">("semana");
   const [parsed, setParsed] = useState<ParsedEntry[]>([]);
 
   useEffect(() => {
@@ -46,13 +47,9 @@ export default function AdminPointsPage() {
       const pts = parseInt(match[2], 10);
       const rest = match[3].toLowerCase();
 
-      let type: "semana" | "individual" | "total" = "individual";
-      if (rest.includes("semana") || rest.includes("semanal") || rest.includes("weekly")) {
-        type = "semana";
-      } else if (rest.includes("total") || rest.includes("guilda") || rest.includes("geral")) {
+      let type = selectedType;
+      if (rest.includes("total") || rest.includes("guilda") || rest.includes("geral")) {
         type = "total";
-      } else if (rest.includes("individual") || rest.includes("individuais")) {
-        type = "individual";
       }
 
       const canonicalNick = nickToLower.get(rawNick.toLowerCase()) || rawNick;
@@ -65,7 +62,7 @@ export default function AdminPointsPage() {
   const handleParse = () => {
     const results = parseText(pasteText);
     setParsed(results);
-    setToast(`✅ ${results.length} linha(s) parseada(s)!`);
+    setToast(`✅ ${results.length} entrada(s) como ${selectedType === "semana" ? "📅 Semana" : selectedType === "individual" ? "👤 Individual" : "🏆 Total"}`);
   };
 
   const handleSave = async () => {
@@ -95,7 +92,7 @@ export default function AdminPointsPage() {
       });
       const result = await res.json();
       if (result.ok) {
-        setToast(`✅ Tudo salvo! Semana: ${result.week}`);
+        setToast(`✅ Tudo salvo! (${parsed.length} entradas)`);
         setParsed([]);
         setPasteText("");
       } else {
@@ -116,21 +113,34 @@ export default function AdminPointsPage() {
       <h1 className="text-2xl font-black text-white mb-6">📊 Pontos em Massa</h1>
 
       <div className="bg-white/[0.02] border border-white/5 rounded-xl p-6 mb-6">
+        <div className="flex gap-3 mb-4 items-center">
+          <label className="text-sm font-bold text-white/60">Tipo:</label>
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value as "semana" | "individual" | "total")}
+            className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-primary/50"
+          >
+            <option value="semana">📅 Semana</option>
+            <option value="individual">👤 Individual</option>
+            <option value="total">🏆 Total Guilda</option>
+          </select>
+        </div>
+
         <p className="text-sm text-white/50 mb-4">
-          Cole o texto do ChatGPT. Formato esperado:
+          Cole o texto do ChatGPT abaixo. Todos os jogadores receberão o tipo selecionado.
         </p>
         <code className="block bg-black/40 rounded-lg p-4 text-xs text-primary font-mono mb-4">
-          MarquinhT.I 15000 pontos da semana<br />
-          JoaoT.I 12000 pontos individuais<br />
-          LucasT.I 8000 pontos da semana<br />
-          Marquinhos 5000 pontos total da guilda
+          Exemplo (selecionou "Semana"):<br />
+          MarquinhT.I 15000<br />
+          JoaoT.I 12000<br />
+          LucasT.I 8000
         </code>
 
         <textarea
           value={pasteText}
           onChange={(e) => { setPasteText(e.target.value); setParsed([]); }}
           rows={8}
-          placeholder="MarquinhT.I 15000 pontos da semana&#10;JoaoT.I 12000 pontos individuais"
+          placeholder="MarquinhT.I 15000&#10;JoaoT.I 12000&#10;LucasT.I 8000"
           className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-primary/50 resize-none"
         />
 
@@ -147,7 +157,7 @@ export default function AdminPointsPage() {
               disabled={saving}
               className="px-6 py-2 rounded-lg bg-primary text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50"
             >
-              {saving ? "Salvando..." : `🚀 Salvar ${parsed.length} entrada(s)`}
+              {saving ? "Salvando..." : `🚀 Salvar ${parsed.length} entrada(s) como ${selectedType === "semana" ? "Semana" : selectedType === "individual" ? "Individual" : "Total"}`}
             </button>
           )}
         </div>
