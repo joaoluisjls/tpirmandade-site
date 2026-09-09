@@ -44,7 +44,8 @@ export default function AdminPointsPage() {
 
       const rawNick = match[1];
       const pts = parseInt(match[2], 10);
-      const canonicalNick = nickToLower.get(rawNick.toLowerCase()) || rawNick;
+      const canonicalNick = nickToLower.get(rawNick.toLowerCase());
+      if (!canonicalNick) continue;
       results.push({ nick: canonicalNick, points: pts, type: "individual" });
     }
 

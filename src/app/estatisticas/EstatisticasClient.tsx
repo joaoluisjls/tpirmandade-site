@@ -124,31 +124,24 @@ export default function EstatisticasClient({
           </div>
         )}
 
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 mb-8">
-          <h2 className="text-lg font-bold text-white mb-4">📊 RESUMO</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-3xl font-black text-white">{players.length}</div>
-              <div className="text-xs text-white/40 uppercase">Membros</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-black text-emerald-400">{initialPointsTotal.toLocaleString()}</div>
-              <div className="text-xs text-white/40 uppercase">Total Guilda</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-black text-primary">{totalPoints.toLocaleString()}</div>
-              <div className="text-xs text-white/40 uppercase">Individual Total</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-black text-yellow-400">{owner ? 1 : 0}</div>
-              <div className="text-xs text-white/40 uppercase">Dono</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-black text-emerald-400">{admins.length}</div>
-              <div className="text-xs text-white/40 uppercase">Admins</div>
+          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-6 mb-6 text-center">
+            <div className="text-xs text-white/40 uppercase mb-2">Total de Pontos</div>
+            <div className="text-4xl font-black text-primary mb-4">{totalPoints.toLocaleString()}</div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="rounded-lg bg-white/5 p-3">
+                <div className="text-lg font-black text-yellow-400">{admins.length > 0 ? 0 : 0}</div>
+                <div className="text-[10px] text-white/40 uppercase">📅 Semana</div>
+              </div>
+              <div className="rounded-lg bg-white/5 p-3">
+                <div className="text-lg font-black text-primary">{totalPoints.toLocaleString()}</div>
+                <div className="text-[10px] text-white/40 uppercase">👤 Individual</div>
+              </div>
+              <div className="rounded-lg bg-white/5 p-3">
+                <div className="text-lg font-black text-emerald-400">{initialPointsTotal.toLocaleString()}</div>
+                <div className="text-[10px] text-white/40 uppercase">🏆 Guilda</div>
+              </div>
             </div>
           </div>
-        </div>
 
         {socials.length > 0 && (
           <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 mb-8">

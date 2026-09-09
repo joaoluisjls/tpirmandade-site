@@ -13,7 +13,7 @@ export default async function EstatisticasPage() {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
   const [p, leadersRes, totalRes] = await Promise.all([
-    supabase.from("players").select("id, nick, name, role, avatar, status, points").order("points", { ascending: false }),
+    supabase.from("players").select("id, nick, name, role, avatar, status, points, weekly_evolution").order("points", { ascending: false }),
     supabase.from("guild_settings").select("key, value").in("key", ["guild_owner_nick", "guild_admin_nicks"]),
     supabase.from("guild_settings").select("key, value").eq("key", "points_total"),
   ]);

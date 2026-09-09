@@ -52,21 +52,22 @@ export default function PlayerProfileClient({ player: p, pointsTotal }: Props) {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-6 text-center">
-            <div className="text-lg mb-1">⭐</div>
-            <div className="text-2xl font-black text-primary">{p.points.toLocaleString()}</div>
-            <div className="text-[10px] text-white/40 uppercase">Individual</div>
-          </div>
-          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-6 text-center">
-            <div className="text-lg mb-1">📅</div>
-            <div className="text-2xl font-black text-yellow-400">{currentWeekPoints.toLocaleString()}</div>
-            <div className="text-[10px] text-white/40 uppercase">Semana</div>
-          </div>
-          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-6 text-center">
-            <div className="text-lg mb-1">🏆</div>
-            <div className="text-2xl font-black text-emerald-400">{pointsTotal.toLocaleString()}</div>
-            <div className="text-[10px] text-white/40 uppercase">Total Guilda</div>
+        <div className="rounded-xl border border-white/5 bg-white/[0.02] p-6 mb-6 text-center">
+          <div className="text-xs text-white/40 uppercase mb-2">Total de Pontos</div>
+          <div className="text-4xl font-black text-primary mb-4">{(p.points + currentWeekPoints + pointsTotal).toLocaleString()}</div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="rounded-lg bg-white/5 p-3">
+              <div className="text-lg font-black text-yellow-400">{currentWeekPoints.toLocaleString()}</div>
+              <div className="text-[10px] text-white/40 uppercase">📅 Semana</div>
+            </div>
+            <div className="rounded-lg bg-white/5 p-3">
+              <div className="text-lg font-black text-primary">{p.points.toLocaleString()}</div>
+              <div className="text-[10px] text-white/40 uppercase">👤 Individual</div>
+            </div>
+            <div className="rounded-lg bg-white/5 p-3">
+              <div className="text-lg font-black text-emerald-400">{pointsTotal.toLocaleString()}</div>
+              <div className="text-[10px] text-white/40 uppercase">🏆 Guilda</div>
+            </div>
           </div>
         </div>
 
