@@ -23,11 +23,13 @@ export default function EstatisticasClient({
   initialSettings,
   initialOwner,
   initialAdmins,
+  initialPointsTotal,
 }: {
   initialPlayers: Player[];
   initialSettings: GuildSettings;
   initialOwner: string;
   initialAdmins: string[];
+  initialPointsTotal: number;
 }) {
   const [players] = useState<Player[]>(initialPlayers);
   const [settings] = useState<GuildSettings>(initialSettings);
@@ -130,8 +132,12 @@ export default function EstatisticasClient({
               <div className="text-xs text-white/40 uppercase">Membros</div>
             </div>
             <div className="text-center">
+              <div className="text-3xl font-black text-emerald-400">{initialPointsTotal.toLocaleString()}</div>
+              <div className="text-xs text-white/40 uppercase">Total Guilda</div>
+            </div>
+            <div className="text-center">
               <div className="text-3xl font-black text-primary">{totalPoints.toLocaleString()}</div>
-              <div className="text-xs text-white/40 uppercase">Pontos Total</div>
+              <div className="text-xs text-white/40 uppercase">Individual Total</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-black text-yellow-400">{owner ? 1 : 0}</div>
