@@ -68,14 +68,24 @@ export default function AdminPointsPage() {
 
     for (const line of lines) {
       const trimmed = line.trim();
-      const match = trimmed.match(/^(.+?)\s+(\d+)$/);
+      if (!trimmed) continue;
+
+      const lower = trimmed.toLowerCase();
+      let type: "semana" | "individual" | "total" = "individual";
+      let cleanLine = trimmed;
+
+      if (/\b(semana|semanas)\b/.test(lower)) { type = "semana"; cleanLine = trimmed.replace(/\b(semana|semanas)\b/gi, "").trim(); }
+      else if (/\b(individual|individuais)\b/.test(lower)) { type = "individual"; cleanLine = trimmed.replace(/\b(individual|individuais)\b/gi, "").trim(); }
+      else if (/\b(total|totais)\b/.test(lower)) { type = "total"; cleanLine = trimmed.replace(/\b(total|totais)\b/gi, "").trim(); }
+
+      const match = cleanLine.match(/^(.+?)\s+(\d+)$/);
       if (!match) continue;
 
       const rawNick = match[1].trim();
       const pts = parseInt(match[2], 10);
       const canonicalNick = nickToLower.get(rawNick.toLowerCase());
       if (!canonicalNick) continue;
-      results.push({ nick: canonicalNick, points: pts, type: "individual" });
+      results.push({ nick: canonicalNick, points: pts, type });
     }
     return results;
   }
@@ -190,12 +200,12 @@ export default function AdminPointsPage() {
           {/* Colar texto */}
           <div className="bg-white/[0.02] border border-white/5 rounded-xl p-6 mb-6">
             <h2 className="text-sm font-bold text-white/60 uppercase tracking-wider mb-2">Colar em Massa</h2>
-            <p className="text-xs text-white/30 mb-4">Formato: <code className="text-primary">Nick Pontos</code> (um por linha)</p>
+            <p className="text-xs text-white/30 mb-4">Formatos: <code className="text-primary">Nick Pontos</code> ou <code className="text-primary">Nick Pontos Tipo</code> (Tipo = Semana, Individual, Total)</p>
             <textarea
               value={pasteText}
               onChange={(e) => { setPasteText(e.target.value); setParsed([]); }}
               rows={6}
-              placeholder={"Coringa 100\nMarquinhoT.I 200\nDIOGO 4 T.I 150"}
+              placeholder={"CORINGA 100 SEMANA\nMarquinhoT.I 200\nDIOGO 4 T.I 150 TOTAL"}
               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-primary/50 resize-none"
             />
             <div className="flex gap-3 mt-3">
