@@ -1,41 +1,41 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { sql } from "@/lib/db";
+import { verifyPassword, createToken } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
-
   const { email, password } = await request.json();
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
+  if (!email || !password) {
+    return NextResponse.json({ error: "Email e senha sao obrigatorios" }, { status: 400 });
+  }
+
+  const { rows } = await sql`
+    SELECT * FROM admins WHERE email = ${email.toLowerCase().trim()}
+  `;
+
+  if (rows.length === 0) {
+    return NextResponse.json({ error: "Credenciais invalidas" }, { status: 401 });
+  }
+
+  const admin = rows[0];
+  const valid = verifyPassword(password, admin.password_hash);
+
+  if (!valid) {
+    return NextResponse.json({ error: "Credenciais invalidas" }, { status: 401 });
+  }
+
+  const token = createToken(email.toLowerCase().trim());
+
+  const response = NextResponse.json({ user: { email: admin.email } });
+  response.cookies.set("admin-token", token, {
+    path: "/",
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 7,
   });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 401 });
-  }
-
-  const response = NextResponse.json({ user: data.user });
-
-  if (data.session) {
-    response.cookies.set("sb-access-token", data.session.access_token, {
-      path: "/",
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-    });
-    response.cookies.set("sb-refresh-token", data.session.refresh_token, {
-      path: "/",
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-    });
-  }
 
   return response;
 }

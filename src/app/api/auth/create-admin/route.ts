@@ -1,38 +1,44 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { sql } from "@/lib/db";
+import { hashPassword, getSession } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
+  }
+
   const { email, password } = await request.json();
 
   if (!email || !password) {
-    return NextResponse.json({ error: "Email e senha são obrigatórios" }, { status: 400 });
+    return NextResponse.json({ error: "Email e senha sao obrigatorios" }, { status: 400 });
   }
 
   if (password.length < 6) {
-    return NextResponse.json({ error: "Senha deve ter no mínimo 6 caracteres" }, { status: 400 });
+    return NextResponse.json({ error: "Senha deve ter no minimo 6 caracteres" }, { status: 400 });
   }
 
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
+  const hash = hashPassword(password);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
+  const { rows } = await sql`
+    INSERT INTO admins (email, password_hash)
+    VALUES (${email.toLowerCase().trim()}, ${hash})
+    ON CONFLICT (email) DO UPDATE SET password_hash = ${hash}
+    RETURNING id, email, created_at
+  `;
 
-  return NextResponse.json({ user: data.user });
+  return NextResponse.json({ user: rows[0] });
 }
 
 export async function GET() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  const { data, error } = await supabase.auth.admin.listUsers();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
   }
 
-  return NextResponse.json(data.users);
+  const { rows } = await sql`SELECT id, email, created_at FROM admins ORDER BY created_at DESC`;
+
+  return NextResponse.json(rows);
 }
