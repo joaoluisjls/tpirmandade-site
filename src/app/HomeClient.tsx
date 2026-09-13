@@ -86,6 +86,31 @@ export default function HomePageClient({ initialPlayers, initialWars, initialAch
   const [settings, setSettings] = useState<GuildSettings>(initialSettings);
   const [guildMVPData, setGuildMVPData] = useState<GuildMVP>({ mvp_id: "", top3_ids: [] });
   const [registered, setRegistered] = useState(true);
+  const [showVerify, setShowVerify] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState("");
+  const [verifyError, setVerifyError] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
+
+  const handleVerifyEmail = async () => {
+    if (!verifyEmail) { setVerifyError("Digite seu email"); return; }
+    setVerifyLoading(true);
+    setVerifyError("");
+    try {
+      const res = await fetch(`/api/player-profile?email=${encodeURIComponent(verifyEmail)}`);
+      const data = await res.json();
+      if (data.found) {
+        localStorage.setItem("tpi_registered_ack", "true");
+        setRegistered(true);
+      } else {
+        setVerifyError("Email nao encontrado. Cadastre-se primeiro!");
+        setTimeout(() => { window.location.href = "/recrutamento"; }, 2000);
+      }
+    } catch {
+      setVerifyError("Erro ao verificar. Tente novamente.");
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
 
   useEffect(() => {
     const ack = localStorage.getItem("tpi_registered_ack");
@@ -159,11 +184,37 @@ export default function HomePageClient({ initialPlayers, initialWars, initialAch
             <p className="text-white/50 text-sm mb-8">
               Se voce ja fazia parte da <span className="text-primary font-bold">TP&IRMANDADE</span>, precisa se cadastrar novamente para acessar o site.
             </p>
-            <div className="space-y-3">
-              <Link href="/recrutamento" className="block w-full px-6 py-4 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/30 transition-all">
-                CADASTRAR-SE AGORA
-              </Link>
-            </div>
+
+            {!showVerify ? (
+              <div className="space-y-3">
+                <Link href="/recrutamento" className="block w-full px-6 py-4 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/30 transition-all">
+                  CADASTRAR-SE AGORA
+                </Link>
+                <button onClick={() => setShowVerify(true)} className="block w-full px-6 py-4 rounded-xl border border-white/10 text-white/40 font-medium text-sm hover:bg-white/5 hover:text-white/60 transition-all">
+                  JA TENHO CADASTRO
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-white/60 text-sm mb-3">Digite o email que voce usou no cadastro:</p>
+                <input
+                  type="email"
+                  value={verifyEmail}
+                  onChange={(e) => setVerifyEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleVerifyEmail()}
+                  placeholder="seu@email.com"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50"
+                />
+                {verifyError && <p className="text-red-400 text-sm">{verifyError}</p>}
+                <button onClick={handleVerifyEmail} disabled={verifyLoading} className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/30 transition-all disabled:opacity-50">
+                  {verifyLoading ? "Verificando..." : "VERIFICAR ACESSO"}
+                </button>
+                <button onClick={() => { setShowVerify(false); setVerifyEmail(""); setVerifyError(""); }} className="block w-full px-6 py-3 text-white/30 text-xs hover:text-white/50 transition-colors">
+                  ← Voltar
+                </button>
+              </div>
+            )}
+
             <p className="text-white/20 text-xs mt-6">Apos o cadastro, voce recebera um PIN para gerenciar seu perfil</p>
           </div>
         </div>

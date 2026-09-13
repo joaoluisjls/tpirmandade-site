@@ -3,6 +3,22 @@ import { sql } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const email = url.searchParams.get("email");
+
+  if (!email) {
+    return NextResponse.json({ found: false });
+  }
+
+  const { rows } = await sql`
+    SELECT id, nick, name, email FROM players
+    WHERE LOWER(email) = ${email.toLowerCase().trim()}
+  `;
+
+  return NextResponse.json({ found: rows.length > 0, player: rows[0] || null });
+}
+
 export async function POST(request: Request) {
   const { nick, pin } = await request.json();
 
