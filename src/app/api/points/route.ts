@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const { rows } = await sql`
-    SELECT id, nick, weekly_evolution, points FROM players LIMIT 500
+    SELECT id, nick, points FROM players ORDER BY nick ASC
   `;
   return NextResponse.json(rows);
 }
@@ -18,49 +18,40 @@ export async function PUT(request: Request) {
     const { weekly, individual, total } = data as {
       weekly: Record<string, number>;
       individual: Record<string, number>;
-      total: number;
+      total: Record<string, number> | number;
     };
 
-    const { rows: players } = await sql`
-      SELECT id, nick, weekly_evolution FROM players LIMIT 500
-    `;
+    const { rows: players } = await sql`SELECT id, nick FROM players`;
     const nickToId: Record<string, string> = {};
     players.forEach((p) => { nickToId[p.nick] = p.id; });
 
     const now = new Date();
-    const weekStr = `points_history_${now.getFullYear()}_W${Math.ceil((now.getDate() - 1) / 7) + 1}`;
-    const weekLabel = `${now.getFullYear()}_W${Math.ceil((now.getDate() - 1) / 7) + 1}`;
+    const weekNum = Math.ceil(((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / 86400000 + 1) / 7);
+    const weekLabel = `${now.getFullYear()}_W${weekNum}`;
+    const weekStr = `points_history_${weekLabel}`;
+
     const errors: string[] = [];
 
-    const individualUpdates: { id: string; points: number }[] = [];
-    const weeklyUpdates: { id: string; weekly_evolution: any[] }[] = [];
-
-    if (individual && Object.keys(individual).length > 0) {
-      for (const [nick, pts] of Object.entries(individual) as [string, number][]) {
-        const id = nickToId[nick];
-        if (id) individualUpdates.push({ id, points: pts });
-      }
-    }
-
+    // Salvar pontos semanais
     if (weekly && Object.keys(weekly).length > 0) {
-      for (const [nick, pts] of Object.entries(weekly) as [string, number][]) {
+      const weeklyData: Record<string, number> = {};
+      for (const [nick, pts] of Object.entries(weekly)) {
         const id = nickToId[nick];
         if (id) {
-          const player = players.find((p) => p.nick === nick);
-          const currentWE = player?.weekly_evolution || [];
+          weeklyData[nick] = pts;
+          // Atualizar weekly_evolution do jogador
+          const { rows: playerRows } = await sql`SELECT weekly_evolution FROM players WHERE id = ${id}`;
+          const currentWE = playerRows[0]?.weekly_evolution || [];
           const existingIdx = currentWE.findIndex((w: any) => w.week === weekLabel);
           if (existingIdx >= 0) {
             currentWE[existingIdx] = { week: weekLabel, points: pts };
           } else {
             currentWE.push({ week: weekLabel, points: pts });
           }
-          weeklyUpdates.push({ id, weekly_evolution: currentWE });
+          await sql`UPDATE players SET weekly_evolution = ${JSON.stringify(currentWE)}::jsonb WHERE id = ${id}`;
+        } else {
+          errors.push(`Jogador "${nick}" nao encontrado`);
         }
-      }
-
-      const weeklyData: Record<string, number> = {};
-      for (const [nick, pts] of Object.entries(weekly) as [string, number][]) {
-        weeklyData[nick] = pts;
       }
       await sql`
         INSERT INTO guild_settings (key, value)
@@ -69,29 +60,32 @@ export async function PUT(request: Request) {
       `;
     }
 
-    for (const update of individualUpdates) {
-      await sql`
-        UPDATE players SET points = ${update.points} WHERE id = ${update.id}
-      `;
+    // Salvar pontos individuais (define o total do jogador)
+    if (individual && Object.keys(individual).length > 0) {
+      for (const [nick, pts] of Object.entries(individual)) {
+        const id = nickToId[nick];
+        if (id) {
+          await sql`UPDATE players SET points = ${pts} WHERE id = ${id}`;
+        } else {
+          errors.push(`Jogador "${nick}" nao encontrado`);
+        }
+      }
     }
 
-    for (const update of weeklyUpdates) {
-      await sql`
-        UPDATE players SET weekly_evolution = ${JSON.stringify(update.weekly_evolution)}::jsonb
-        WHERE id = ${update.id}
-      `;
-    }
-
-    if (total) {
-      await sql`
-        INSERT INTO guild_settings (key, value)
-        VALUES ('points_total', ${JSON.stringify(total)})
-        ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(total)}
-      `;
+    // Salvar pontos totais (por jogador)
+    if (total && typeof total === "object") {
+      for (const [nick, pts] of Object.entries(total)) {
+        const id = nickToId[nick];
+        if (id) {
+          await sql`UPDATE players SET points = ${pts} WHERE id = ${id}`;
+        } else {
+          errors.push(`Jogador "${nick}" nao encontrado`);
+        }
+      }
     }
 
     if (errors.length > 0) {
-      return NextResponse.json({ ok: false, errors }, { status: 500 });
+      return NextResponse.json({ ok: false, errors }, { status: 200 });
     }
     return NextResponse.json({ ok: true, week: weekStr });
   }
