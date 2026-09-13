@@ -85,8 +85,13 @@ export default function HomePageClient({ initialPlayers, initialWars, initialAch
   const [announcements, setAnnouncements] = useState<any[]>(initialAnnouncements);
   const [settings, setSettings] = useState<GuildSettings>(initialSettings);
   const [guildMVPData, setGuildMVPData] = useState<GuildMVP>({ mvp_id: "", top3_ids: [] });
+  const [registered, setRegistered] = useState(true);
 
   useEffect(() => {
+    const ack = localStorage.getItem("tpi_registered_ack");
+    if (ack === "true") setRegistered(true);
+    else setRegistered(false);
+
     Promise.all([
       fetch("/api/players", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/wars", { cache: "no-store" }).then((r) => r.json()),
@@ -138,28 +143,31 @@ export default function HomePageClient({ initialPlayers, initialWars, initialAch
 
   const medals = ["🥇", "🥈", "🥉"];
 
-  const [bannerDismissed, setBannerDismissed] = useState(false);
-
   return (
     <div className="pt-24">
-      {/* Aviso de recadastramento */}
-      {!bannerDismissed && (
-        <div className="bg-gradient-to-r from-red-600/20 via-primary/20 to-red-600/20 border-b border-primary/30">
-          <div className="max-w-4xl mx-auto px-4 py-5 text-center">
-            <div className="text-3xl mb-2">⚠️</div>
-            <h2 className="text-lg sm:text-xl font-black text-white mb-2">SISTEMA RECRIADO - RECADASTRAMENTO OBRIGATORIO</h2>
-            <p className="text-white/60 text-sm mb-4 max-w-lg mx-auto">
-              Tivemos um problema com o sistema antigo e todos os dados foram perdidos.
-              Se voce ja fazia parte da guilda, precisa se cadastrar novamente.
+      {/* Overlay de recadastramento - bloqueia todo o site */}
+      {!registered && (
+        <div className="fixed inset-0 z-[200] bg-[#0a0a0f] flex items-center justify-center p-4 overflow-auto">
+          <div className="max-w-md w-full text-center">
+            <div className="w-20 h-20 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-6">
+              <span className="text-4xl">⚠️</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white mb-3">SISTEMA RECRIADO</h1>
+            <p className="text-white/50 text-sm mb-2">
+              Tivemos um problema no sistema anterior e <span className="text-white font-bold">todos os dados foram perdidos</span>.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Link href="/recrutamento" className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/30 transition-all">
-                CADASTRAR AGORA
+            <p className="text-white/50 text-sm mb-8">
+              Se voce ja fazia parte da <span className="text-primary font-bold">TP&IRMANDADE</span>, precisa se cadastrar novamente para acessar o site.
+            </p>
+            <div className="space-y-3">
+              <Link href="/recrutamento" className="block w-full px-6 py-4 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/30 transition-all">
+                CADASTRAR-SE NOVAMENTE
               </Link>
-              <button onClick={() => setBannerDismissed(true)} className="px-6 py-3 rounded-xl border border-white/10 text-white/50 font-medium text-sm hover:bg-white/5 transition-all">
-                Ja me cadastrei
+              <button onClick={() => { localStorage.setItem("tpi_registered_ack", "true"); setRegistered(true); }} className="block w-full px-6 py-4 rounded-xl border border-white/10 text-white/40 font-medium text-sm hover:bg-white/5 hover:text-white/60 transition-all">
+                Ja me cadastrei / Ja sou membro
               </button>
             </div>
+            <p className="text-white/20 text-xs mt-6">Apos o cadastro, voce recebera um PIN para gerenciar seu perfil</p>
           </div>
         </div>
       )}
