@@ -161,11 +161,8 @@ export default function HomePageClient({ initialPlayers, initialWars, initialAch
             </p>
             <div className="space-y-3">
               <Link href="/recrutamento" className="block w-full px-6 py-4 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/30 transition-all">
-                CADASTRAR-SE NOVAMENTE
+                CADASTRAR-SE AGORA
               </Link>
-              <button onClick={() => { localStorage.setItem("tpi_registered_ack", "true"); setRegistered(true); }} className="block w-full px-6 py-4 rounded-xl border border-white/10 text-white/40 font-medium text-sm hover:bg-white/5 hover:text-white/60 transition-all">
-                Ja me cadastrei / Ja sou membro
-              </button>
             </div>
             <p className="text-white/20 text-xs mt-6">Apos o cadastro, voce recebera um PIN para gerenciar seu perfil</p>
           </div>

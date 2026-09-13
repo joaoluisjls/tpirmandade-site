@@ -89,15 +89,16 @@ export default function RecrutamentoPage() {
   };
 
   if (submitted) {
+    if (typeof window !== "undefined") localStorage.setItem("tpi_registered_ack", "true");
     return (
       <div className="pt-28 pb-20">
         <div className="max-w-lg mx-auto px-4 text-center rounded-2xl border border-white/5 bg-white/[0.02] p-10">
           <div className="text-5xl mb-4">✅</div>
           <h1 className="text-2xl font-black text-white mb-3">RECRUTAMENTO ENVIADO!</h1>
-          <p className="text-white/40 mb-6">Obrigado pelo interesse! Analisaremos seu perfil e entraremos em contato.</p>
-          <button onClick={() => { setSubmitted(false); setPhoto(""); setPhotoName(""); setRoles([]); setForm({ nick: "", name: "", age: "", ffId: "", email: "", experience: "", reason: "", contact: "", points: "" }); }} className="px-6 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-sm hover:bg-white/10 transition-colors">
-            Enviar outro
-          </button>
+          <p className="text-white/40 mb-6">Seu pedido foi enviado com sucesso! Aguarde a aprovacao do lider e voce recebera seu PIN de acesso.</p>
+          <a href="/" className="inline-block px-6 py-2.5 rounded-lg bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/20 transition-colors">
+            VOLTAR AO SITE
+          </a>
         </div>
       </div>
     );
