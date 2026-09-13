@@ -49,10 +49,13 @@ export default function AdminPedidos() {
 
   useEffect(() => { load(); }, []);
 
+  const [acceptedPin, setAcceptedPin] = useState<{ nick: string; pin: string } | null>(null);
+
   const accept = async (req: Request) => {
     setProcessing(req.id);
     try {
       const playerId = req.nick.toLowerCase().replace(/[^a-z0-9_]/g, "_") + "_" + Date.now();
+      const pin = Math.random().toString().slice(2, 8);
       const roleMap: Record<string, string> = {
         iniciante: "Recruta",
         intermediario: "Membro",
@@ -74,6 +77,9 @@ export default function AdminPedidos() {
           headshots: 0, headshot_rate: 0, avg_damage: 0, win_rate: 0,
           points: req.points || 0,
           bio: req.reason || "",
+          pin,
+          phone: req.contact || "",
+          email: req.email || "",
           achievements: [],
         }),
       });
@@ -100,7 +106,8 @@ export default function AdminPedidos() {
         });
       }
 
-      setToast(req.nick + " foi aceito e adicionado aos jogadores!");
+      setAcceptedPin({ nick: req.nick, pin });
+      setToast(req.nick + " foi aceito! PIN: " + pin);
       load();
     } catch (e: any) {
       setToast("Erro ao aceitar: " + (e.message || "desconhecido"));
@@ -144,6 +151,20 @@ export default function AdminPedidos() {
 
   return (
     <div>
+      {acceptedPin && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4" onClick={() => setAcceptedPin(null)}>
+          <div className="bg-[#1a1a2e] border border-primary/30 rounded-2xl p-6 max-w-sm w-full text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="text-3xl mb-2">✅</div>
+            <h3 className="text-white font-black text-lg mb-1">{acceptedPin.nick} foi adicionado!</h3>
+            <p className="text-white/40 text-sm mb-4">Envie este PIN para o jogador atualizar o perfil dele:</p>
+            <div className="bg-black/30 rounded-xl px-6 py-3 mb-4">
+              <span className="text-primary text-3xl font-black tracking-[0.3em]">{acceptedPin.pin}</span>
+            </div>
+            <p className="text-white/30 text-xs mb-4">O jogador acessa <span className="text-white/50">tropairmandade.com.br/meu-perfil</span> e usa este PIN</p>
+            <button onClick={() => setAcceptedPin(null)} className="px-6 py-2 rounded-lg bg-primary text-white text-sm font-bold">Fechar</button>
+          </div>
+        </div>
+      )}
       {toast && (
         <div className="fixed top-4 right-4 z-[100] bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-[fadeIn_0.2s]">
           <span className="text-sm font-bold">{toast}</span>

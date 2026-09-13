@@ -15,10 +15,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { id, nick, name, role, status, bio, joined_at, avatar, matches, wins, kills, deaths, kd, headshots, headshot_rate, avg_damage, win_rate, points, weekly_evolution, achievements } = body;
+  const { id, nick, name, role, status, bio, joined_at, avatar, matches, wins, kills, deaths, kd, headshots, headshot_rate, avg_damage, win_rate, points, weekly_evolution, achievements, pin, phone, email } = body;
   const { rows } = await sql`
-    INSERT INTO players (id, nick, name, role, status, bio, joined_at, avatar, matches, wins, kills, deaths, kd, headshots, headshot_rate, avg_damage, win_rate, points, weekly_evolution, achievements)
-    VALUES (${id}, ${nick || ""}, ${name || ""}, ${role || ""}, ${status || "offline"}, ${bio || ""}, ${joined_at || ""}, ${avatar || ""}, ${matches || 0}, ${wins || 0}, ${kills || 0}, ${deaths || 0}, ${kd || 0}, ${headshots || 0}, ${headshot_rate || 0}, ${avg_damage || 0}, ${win_rate || 0}, ${points || 0}, ${JSON.stringify(weekly_evolution || [])}::jsonb, ${JSON.stringify(achievements || [])}::jsonb)
+    INSERT INTO players (id, nick, name, role, status, bio, joined_at, avatar, matches, wins, kills, deaths, kd, headshots, headshot_rate, avg_damage, win_rate, points, weekly_evolution, achievements, pin, phone, email)
+    VALUES (${id}, ${nick || ""}, ${name || ""}, ${role || ""}, ${status || "offline"}, ${bio || ""}, ${joined_at || ""}, ${avatar || ""}, ${matches || 0}, ${wins || 0}, ${kills || 0}, ${deaths || 0}, ${kd || 0}, ${headshots || 0}, ${headshot_rate || 0}, ${avg_damage || 0}, ${win_rate || 0}, ${points || 0}, ${JSON.stringify(weekly_evolution || [])}::jsonb, ${JSON.stringify(achievements || [])}::jsonb, ${pin || ""}, ${phone || ""}, ${email || ""})
     RETURNING *
   `;
   return NextResponse.json(rows[0]);
