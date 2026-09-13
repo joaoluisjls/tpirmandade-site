@@ -138,8 +138,32 @@ export default function HomePageClient({ initialPlayers, initialWars, initialAch
 
   const medals = ["🥇", "🥈", "🥉"];
 
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
   return (
     <div className="pt-24">
+      {/* Aviso de recadastramento */}
+      {!bannerDismissed && (
+        <div className="bg-gradient-to-r from-red-600/20 via-primary/20 to-red-600/20 border-b border-primary/30">
+          <div className="max-w-4xl mx-auto px-4 py-5 text-center">
+            <div className="text-3xl mb-2">⚠️</div>
+            <h2 className="text-lg sm:text-xl font-black text-white mb-2">SISTEMA RECRIADO - RECADASTRAMENTO OBRIGATORIO</h2>
+            <p className="text-white/60 text-sm mb-4 max-w-lg mx-auto">
+              Tivemos um problema com o sistema antigo e todos os dados foram perdidos.
+              Se voce ja fazia parte da guilda, precisa se cadastrar novamente.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link href="/recrutamento" className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/30 transition-all">
+                CADASTRAR AGORA
+              </Link>
+              <button onClick={() => setBannerDismissed(true)} className="px-6 py-3 rounded-xl border border-white/10 text-white/50 font-medium text-sm hover:bg-white/5 transition-all">
+                Ja me cadastrei
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="relative min-h-[85vh] flex items-center justify-center">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
