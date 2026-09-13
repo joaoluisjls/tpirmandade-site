@@ -15,7 +15,6 @@ interface PlayerData {
 export default function MeuPerfilPage() {
   const [step, setStep] = useState<"login" | "edit">("login");
   const [nick, setNick] = useState("");
-  const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -27,17 +26,13 @@ export default function MeuPerfilPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nick || !pin) { setError("Preencha nick e PIN"); return; }
+    if (!nick) { setError("Digite seu nick"); return; }
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/player-profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nick, pin }),
-      });
+      const res = await fetch(`/api/player-profile?nick=${encodeURIComponent(nick)}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro ao acessar");
+      if (!res.ok) throw new Error(data.error || "Jogador nao encontrado");
       setPlayer(data);
       setForm({ name: data.name || "", bio: data.bio || "", phone: data.phone || "", email: data.email || "", avatar: data.avatar || "" });
       setPreview(data.avatar || "");
@@ -67,7 +62,7 @@ export default function MeuPerfilPage() {
       const res = await fetch("/api/player-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: player.id, pin, ...form }),
+        body: JSON.stringify({ id: player.id, ...form }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao salvar");
@@ -137,7 +132,7 @@ export default function MeuPerfilPage() {
             </div>
 
             <div className="flex gap-3 pt-2">
-              <button type="button" onClick={() => { setStep("login"); setPlayer(null); setPin(""); }} className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-bold text-sm hover:bg-white/10 transition-all">
+              <button type="button" onClick={() => { setStep("login"); setPlayer(null); setNick(""); }} className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 font-bold text-sm hover:bg-white/10 transition-all">
                 Sair
               </button>
               <button type="submit" disabled={saving} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50">
@@ -166,17 +161,11 @@ export default function MeuPerfilPage() {
 
           <div>
             <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5">Seu Nick</label>
-            <input type="text" value={nick} onChange={(e) => setNick(e.target.value)} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50" placeholder="Ex: moneySksjoaoT.I" />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-white/40 uppercase tracking-wider mb-1.5">PIN (6 digitos)</label>
-            <input type="text" value={pin} onChange={(e) => setPin(e.target.value.toUpperCase().slice(0, 6))} required maxLength={6} className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm text-center text-2xl tracking-[0.3em] placeholder:text-white/20 focus:outline-none focus:border-primary/50 font-mono" placeholder="------" />
-            <p className="text-white/20 text-xs mt-1.5">Peça seu PIN ao lider da guilda</p>
+            <input type="text" value={nick} onChange={(e) => setNick(e.target.value)} required className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-primary/50" placeholder="Ex: CORINGA" />
           </div>
 
           <button type="submit" disabled={loading} className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-sm hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50">
-            {loading ? "Verificando..." : "ACESSAR MEU PERFIL"}
+            {loading ? "Buscando..." : "ACESSAR MEU PERFIL"}
           </button>
         </form>
       </div>

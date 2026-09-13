@@ -6,70 +6,38 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const email = url.searchParams.get("email");
+  const nick = url.searchParams.get("nick");
 
-  if (!email) {
-    return NextResponse.json({ found: false });
+  if (email) {
+    const { rows } = await sql`
+      SELECT id, nick, name, email FROM players
+      WHERE LOWER(email) = ${email.toLowerCase().trim()}
+    `;
+    return NextResponse.json({ found: rows.length > 0, player: rows[0] || null });
   }
 
-  const { rows } = await sql`
-    SELECT id, nick, name, email FROM players
-    WHERE LOWER(email) = ${email.toLowerCase().trim()}
-  `;
-
-  return NextResponse.json({ found: rows.length > 0, player: rows[0] || null });
-}
-
-export async function POST(request: Request) {
-  const { nick, pin } = await request.json();
-
-  if (!nick || !pin) {
-    return NextResponse.json({ error: "Nick e PIN sao obrigatorios" }, { status: 400 });
+  if (nick) {
+    const { rows } = await sql`
+      SELECT id, nick, name, avatar, bio, phone, email FROM players
+      WHERE LOWER(nick) = ${nick.toLowerCase().trim()}
+    `;
+    if (rows.length === 0) {
+      return NextResponse.json({ error: "Jogador nao encontrado" }, { status: 404 });
+    }
+    return NextResponse.json(rows[0]);
   }
 
-  const { rows } = await sql`
-    SELECT id, nick, name, avatar, bio, phone, email, pin FROM players
-    WHERE LOWER(nick) = ${nick.toLowerCase().trim()}
-  `;
-
-  if (rows.length === 0) {
-    return NextResponse.json({ error: "Jogador nao encontrado" }, { status: 404 });
-  }
-
-  const player = rows[0];
-
-  if (!player.pin || player.pin !== pin.toUpperCase()) {
-    return NextResponse.json({ error: "PIN invalido" }, { status: 401 });
-  }
-
-  return NextResponse.json({
-    id: player.id,
-    nick: player.nick,
-    name: player.name,
-    avatar: player.avatar,
-    bio: player.bio,
-    phone: player.phone,
-    email: player.email,
-  });
+  return NextResponse.json({ error: "Nick ou email obrigatorio" }, { status: 400 });
 }
 
 export async function PUT(request: Request) {
-  const { id, pin, name, avatar, bio, phone, email } = await request.json();
+  const { id, name, avatar, bio, phone, email } = await request.json();
 
-  if (!id || !pin) {
-    return NextResponse.json({ error: "ID e PIN obrigatorios" }, { status: 400 });
+  if (!id) {
+    return NextResponse.json({ error: "ID obrigatorio" }, { status: 400 });
   }
 
-  const { rows } = await sql`SELECT pin FROM players WHERE id = ${id}`;
-
-  if (rows.length === 0) {
-    return NextResponse.json({ error: "Jogador nao encontrado" }, { status: 404 });
-  }
-
-  if (rows[0].pin !== pin.toUpperCase()) {
-    return NextResponse.json({ error: "PIN invalido" }, { status: 401 });
-  }
-
-  const { rows: updated } = await sql`
+  const { rows } = await sql`
     UPDATE players
     SET name = COALESCE(${name || null}, name),
         avatar = COALESCE(${avatar || null}, avatar),
@@ -80,5 +48,9 @@ export async function PUT(request: Request) {
     RETURNING id, nick, name, avatar, bio, phone, email
   `;
 
-  return NextResponse.json(updated[0]);
+  if (rows.length === 0) {
+    return NextResponse.json({ error: "Jogador nao encontrado" }, { status: 404 });
+  }
+
+  return NextResponse.json(rows[0]);
 }
