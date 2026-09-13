@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { getSupabase } from "@/lib/supabase-browser";
 import type { Championship } from "@/lib/bracket";
 import { BracketView, BracketViewMobile } from "@/components/BracketView";
 import { GroupTable } from "@/components/GroupTable";
@@ -55,18 +54,15 @@ export default function GuerrasClient({ initialWars, initialGuildName, initialGu
   const [champFilter, setChampFilter] = useState<"all" | "open" | "in_progress" | "finished">("all");
 
   useEffect(() => {
-    const db = getSupabase();
     Promise.all([
-      db.from("wars").select("id, opponent, date, time, status, result, guild_score, opponent_score, mvp_nick"),
-      db.from("guild_settings").select("key, value"),
-      db.from("championships").select("*"),
-    ]).then(([w, s, c]) => {
-      setWars(w.data ?? []);
-      const settings: Record<string, string> = {};
-      s.data?.forEach((item: any) => { settings[item.key] = item.value; });
-      setGuild({ name: settings.guild_name ?? "", tag: settings.guild_tag ?? "" });
-      setChampionships(c.data ?? []);
-    });
+      fetch("/api/wars", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/championships", { cache: "no-store" }).then((r) => r.json()),
+    ]).then(([warsData, settingsData, championshipsData]) => {
+      setWars(Array.isArray(warsData) ? warsData : []);
+      setGuild({ name: settingsData?.guild_name ?? "", tag: settingsData?.guild_tag ?? "" });
+      setChampionships(Array.isArray(championshipsData) ? championshipsData : []);
+    }).catch(console.error);
   }, []);
 
   const filteredWars = useMemo(() => {

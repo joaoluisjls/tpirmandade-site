@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSupabase } from "@/lib/supabase-browser";
 
 interface Achievement {
   id: string;
@@ -16,9 +15,12 @@ export default function ConquistasClient({ initialAchievements }: { initialAchie
   const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
 
   useEffect(() => {
-    getSupabase().from("achievements").select("id, title, description, date, icon, responsible").order("date", { ascending: false }).then(({ data }) => {
-      if (data) setAchievements(data);
-    });
+    fetch("/api/achievements", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setAchievements(data);
+      })
+      .catch(console.error);
   }, []);
 
   return (

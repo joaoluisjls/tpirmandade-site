@@ -1,16 +1,10 @@
 import JogadoresClient from "./JogadoresClient";
-import { createClient } from "@supabase/supabase-js";
+import { sql } from "@/lib/db";
 
 export const revalidate = 60;
 
 export default async function JogadoresPage() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-  const { data: players, error } = await supabase
-    .from("players")
-    .select("id, nick, name, role, avatar, status, points")
-    .order("points", { ascending: false });
+  const { rows: players } = await sql`SELECT id, nick, name, role, avatar, status, points FROM players ORDER BY points DESC`;
 
-  if (error) console.error("JogadoresPage error:", error.message);
-
-  return <JogadoresClient initialPlayers={players ?? []} />;
+  return <JogadoresClient initialPlayers={(players as any[]) ?? []} />;
 }

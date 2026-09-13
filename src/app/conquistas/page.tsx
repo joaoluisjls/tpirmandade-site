@@ -1,18 +1,10 @@
 import ConquistasClient from "./ConquistasClient";
-import { createClient } from "@supabase/supabase-js";
+import { sql } from "@/lib/db";
 
 export const revalidate = 60;
 
 export default async function ConquistasPage() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+  const { rows: achievements } = await sql`SELECT id, title, description, date, icon, responsible FROM achievements ORDER BY date DESC LIMIT 50`;
 
-  const { data: achievements, error } = await supabase
-    .from("achievements")
-    .select("id, title, description, date, icon, responsible")
-    .order("date", { ascending: false })
-    .limit(50);
-
-  if (error) console.error("ConquistasPage error:", error.message);
-
-  return <ConquistasClient initialAchievements={achievements ?? []} />;
+  return <ConquistasClient initialAchievements={(achievements as any[]) ?? []} />;
 }

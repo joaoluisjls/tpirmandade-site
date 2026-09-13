@@ -1,26 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { sql } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 const KEY = "player_contacts";
 
-function getClient() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-}
-
 async function getContacts() {
-  const supabase = getClient();
-  const { data } = await supabase.from("guild_settings").select("value").eq("key", KEY).single();
-  return data?.value || {};
+  const { rows } = await sql`
+    SELECT value FROM guild_settings WHERE key = ${KEY}
+  `;
+  if (rows.length === 0) return {};
+  try {
+    return typeof rows[0].value === "string" ? JSON.parse(rows[0].value) : rows[0].value || {};
+  } catch {
+    return {};
+  }
 }
 
 async function saveContacts(contacts: Record<string, any>) {
-  const supabase = getClient();
-  const { data: existing } = await supabase.from("guild_settings").select("id").eq("key", KEY).single();
-  if (existing) {
-    await supabase.from("guild_settings").update({ value: contacts }).eq("key", KEY);
-  } else {
-    await supabase.from("guild_settings").insert({ key: KEY, value: contacts });
-  }
+  await sql`
+    INSERT INTO guild_settings (key, value)
+    VALUES (${KEY}, ${JSON.stringify(contacts)})
+    ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(contacts)}
+  `;
 }
 
 export async function GET() {

@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Toast } from "@/components/ui";
-import { getSupabase } from "@/lib/supabase-browser";
-
 const SOCIAL_FIELDS = [
   { label: "Discord", key: "discord", icon: "💬", placeholder: "https://discord.gg/..." },
   { label: "Instagram", key: "instagram", icon: "📷", placeholder: "https://instagram.com/..." },
@@ -40,13 +38,8 @@ export default function AdminGuildaPage() {
           guild_admin_nicks: leadersRes.admins ? leadersRes.admins.join(", ") : "",
         });
 
-        const { data: playersData, error } = await getSupabase()
-          .from("players")
-          .select("id, nick, name, role, avatar")
-          .order("nick", { ascending: true });
-
-        if (error) console.error("Supabase players error:", error.message);
-        setPlayers(playersData || []);
+        const playersRes = await fetch("/api/players", { cache: "no-store" }).then((r) => r.json());
+        setPlayers(Array.isArray(playersRes) ? playersRes : []);
       } catch (err: any) {
         console.error("Load error:", err);
       }

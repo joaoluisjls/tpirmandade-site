@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getSupabase } from "@/lib/supabase-browser";
+
 
 interface Player {
   id: string;
@@ -87,22 +87,19 @@ export default function HomePageClient({ initialPlayers, initialWars, initialAch
   const [guildMVPData, setGuildMVPData] = useState<GuildMVP>({ mvp_id: "", top3_ids: [] });
 
   useEffect(() => {
-    const db = getSupabase();
     Promise.all([
-      db.from("players").select("id, nick, name, role, status, points, avatar, joined_at, bio"),
-      db.from("wars").select("id, opponent, date, time, status, result, guild_score, opponent_score, mvp_nick"),
-      db.from("achievements").select("id, title, description, date, icon, responsible"),
-      db.from("announcements").select("id, title, content, date, time, priority"),
-      db.from("guild_settings").select("key, value"),
-    ]).then(([p, w, a, an, s]) => {
-      setPlayers(p.data ?? []);
-      setWars(w.data ?? []);
-      setAchievements(a.data ?? []);
-      setAnnouncements(an.data ?? []);
-      const settings2: Record<string, string> = {};
-      s.data?.forEach((item: any) => { settings2[item.key] = item.value; });
-      setSettings(settings2);
-    });
+      fetch("/api/players", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/wars", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/achievements", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/announcements", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()),
+    ]).then(([playersData, warsData, achievementsData, announcementsData, settingsData]) => {
+      setPlayers(Array.isArray(playersData) ? playersData : []);
+      setWars(Array.isArray(warsData) ? warsData : []);
+      setAchievements(Array.isArray(achievementsData) ? achievementsData : []);
+      setAnnouncements(Array.isArray(announcementsData) ? announcementsData : []);
+      setSettings(settingsData && typeof settingsData === "object" ? settingsData : {});
+    }).catch(console.error);
     try { setGuildMVPData(JSON.parse(localStorage.getItem(GUILD_MVP_KEY) || '{"mvp_id":"","top3_ids":[]}')); } catch { /* */ }
   }, []);
 

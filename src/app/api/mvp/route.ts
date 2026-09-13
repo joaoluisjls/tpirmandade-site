@@ -1,19 +1,29 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { sql } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-  const { data, error } = await supabase.from("mvp").select("id, player_id, nick, avatar, period, points, matches, wins, kills, deaths, kd, headshots, reason").single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data, {
+  const { rows } = await sql`
+    SELECT id, player_id, nick, avatar, period, points, matches, wins, kills, deaths, kd, headshots, reason
+    FROM mvp LIMIT 1
+  `;
+  return NextResponse.json(rows[0] || null, {
     headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" },
   });
 }
 
 export async function PUT(request: Request) {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
-  const { data, error } = await supabase.from("mvp").upsert(body).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  const { id, player_id, nick, avatar, period, points, matches, wins, kills, deaths, kd, headshots, reason } = body;
+  const { rows } = await sql`
+    INSERT INTO mvp (id, player_id, nick, avatar, period, points, matches, wins, kills, deaths, kd, headshots, reason)
+    VALUES (${id}, ${player_id || ""}, ${nick || ""}, ${avatar || ""}, ${period || ""}, ${points || 0}, ${matches || 0}, ${wins || 0}, ${kills || 0}, ${deaths || 0}, ${kd || 0}, ${headshots || 0}, ${reason || ""})
+    ON CONFLICT (id) DO UPDATE SET
+      player_id = ${player_id || ""}, nick = ${nick || ""}, avatar = ${avatar || ""}, period = ${period || ""},
+      points = ${points || 0}, matches = ${matches || 0}, wins = ${wins || 0}, kills = ${kills || 0},
+      deaths = ${deaths || 0}, kd = ${kd || 0}, headshots = ${headshots || 0}, reason = ${reason || ""}
+    RETURNING *
+  `;
+  return NextResponse.json(rows[0]);
 }

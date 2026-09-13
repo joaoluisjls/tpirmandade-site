@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { sql } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-  const { data, error } = await supabase
-    .from("guild_settings")
-    .select("key, value")
-    .like("key", "championship:%");
+  const { rows } = await sql`
+    SELECT key, value FROM guild_settings
+    WHERE key LIKE 'championship:%'
+  `;
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  const championships = (data || [])
+  const championships = rows
     .filter((row) => !row.key.includes(":matches:") && !row.key.includes(":participants:"))
     .map((row) => {
       try { return JSON.parse(row.value); } catch { return null; }
@@ -23,7 +22,6 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
 
   const id = `champ_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
@@ -43,54 +41,49 @@ export async function POST(request: Request) {
     created_at: new Date().toISOString(),
   };
 
-  const { error } = await supabase
-    .from("guild_settings")
-    .upsert({ key: `championship:${id}`, value: JSON.stringify(championship) });
+  await sql`
+    INSERT INTO guild_settings (key, value)
+    VALUES (${'championship:' + id}, ${JSON.stringify(championship)})
+    ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(championship)}
+  `;
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, id });
 }
 
 export async function PUT(request: Request) {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
   const { id, ...updates } = body;
 
   if (!id) return NextResponse.json({ error: "ID obrigatorio" }, { status: 400 });
 
-  const { data, error: fetchError } = await supabase
-    .from("guild_settings")
-    .select("value")
-    .eq("key", `championship:${id}`)
-    .single();
+  const { rows } = await sql`
+    SELECT value FROM guild_settings
+    WHERE key = ${'championship:' + id}
+  `;
 
-  if (fetchError || !data) {
+  if (rows.length === 0) {
     return NextResponse.json({ error: "Campeonato nao encontrado" }, { status: 404 });
   }
 
-  const existing = JSON.parse(data.value);
+  const existing = JSON.parse(rows[0].value);
   const updated = { ...existing, ...updates, id };
 
-  const { error } = await supabase
-    .from("guild_settings")
-    .upsert({ key: `championship:${id}`, value: JSON.stringify(updated) });
+  await sql`
+    INSERT INTO guild_settings (key, value)
+    VALUES (${'championship:' + id}, ${JSON.stringify(updated)})
+    ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(updated)}
+  `;
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(request: Request) {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
 
   if (!id) return NextResponse.json({ error: "ID obrigatorio" }, { status: 400 });
 
-  const { error } = await supabase
-    .from("guild_settings")
-    .delete()
-    .eq("key", `championship:${id}`);
+  await sql`DELETE FROM guild_settings WHERE key = ${'championship:' + id}`;
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

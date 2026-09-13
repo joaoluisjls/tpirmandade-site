@@ -1,29 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { sql } from "@/lib/db";
 
-function getClient() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-}
+export const dynamic = "force-dynamic";
 
 function getKey(championshipId: string) {
   return `championship_subs:${championshipId}`;
 }
 
 async function getSubscriptions(championshipId: string) {
-  const supabase = getClient();
-  const { data } = await supabase.from("guild_settings").select("value").eq("key", getKey(championshipId)).single();
-  return (data?.value as any[]) || [];
+  const { rows } = await sql`
+    SELECT value FROM guild_settings WHERE key = ${getKey(championshipId)}
+  `;
+  if (rows.length === 0) return [];
+  try {
+    return JSON.parse(rows[0].value) || [];
+  } catch {
+    return [];
+  }
 }
 
 async function saveSubscriptions(championshipId: string, subs: any[]) {
-  const supabase = getClient();
   const key = getKey(championshipId);
-  const { data: existing } = await supabase.from("guild_settings").select("id").eq("key", key).single();
-  if (existing) {
-    await supabase.from("guild_settings").update({ value: subs }).eq("key", key);
-  } else {
-    await supabase.from("guild_settings").insert({ key, value: subs });
-  }
+  await sql`
+    INSERT INTO guild_settings (key, value)
+    VALUES (${key}, ${JSON.stringify(subs)})
+    ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(subs)}
+  `;
 }
 
 export async function GET(req: NextRequest) {

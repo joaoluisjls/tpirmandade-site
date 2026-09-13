@@ -1,36 +1,44 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { sql } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-  const { data, error } = await supabase.from("rules").select("id, title, content, category").order("id", { ascending: true });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data, {
+  const { rows } = await sql`
+    SELECT id, title, content, category
+    FROM rules ORDER BY id ASC
+  `;
+  return NextResponse.json(rows, {
     headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=240" },
   });
 }
 
 export async function POST(request: Request) {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
-  const { data, error } = await supabase.from("rules").insert(body).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  const { id, title, content, category } = body;
+  const { rows } = await sql`
+    INSERT INTO rules (id, title, content, category)
+    VALUES (${id}, ${title || ""}, ${content || ""}, ${category || ""})
+    RETURNING *
+  `;
+  return NextResponse.json(rows[0]);
 }
 
 export async function PUT(request: Request) {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
   const { id, ...updates } = body;
-  const { data, error } = await supabase.from("rules").update(updates).eq("id", id).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  const { rows } = await sql`
+    UPDATE rules
+    SET title = ${updates.title ?? ""}, content = ${updates.content ?? ""},
+        category = ${updates.category ?? ""}
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return NextResponse.json(rows[0]);
 }
 
 export async function DELETE(request: Request) {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const { id } = await request.json();
-  const { error } = await supabase.from("rules").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await sql`DELETE FROM rules WHERE id = ${id}`;
   return NextResponse.json({ ok: true });
 }

@@ -1,49 +1,45 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { sql } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  const { data, error } = await supabase
-    .from("recruitment_requests")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) return NextResponse.json({ error: error.message, fallback: true }, { status: 200 });
-  return NextResponse.json(data);
+  const { rows } = await sql`
+    SELECT * FROM recruitment_requests ORDER BY created_at DESC
+  `;
+  return NextResponse.json(rows);
 }
 
 export async function POST(request: Request) {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
-  const { data, error } = await supabase
-    .from("recruitment_requests")
-    .insert(body)
-    .select()
-    .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  const { id, nick, name, age, ff_id, points, experience, reason, contact, email, photo, roles } = body;
+  const { rows } = await sql`
+    INSERT INTO recruitment_requests (id, nick, name, age, ff_id, points, experience, reason, contact, email, photo, status, created_at, roles)
+    VALUES (${id}, ${nick || ""}, ${name || ""}, ${age || ""}, ${ff_id || ""}, ${points || 0}, ${experience || ""}, ${reason || ""}, ${contact || ""}, ${email || ""}, ${photo || ""}, 'pending', ${new Date().toISOString()}, ${JSON.stringify(roles || [])}::jsonb)
+    RETURNING *
+  `;
+  return NextResponse.json(rows[0]);
 }
 
 export async function PUT(request: Request) {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const body = await request.json();
   const { id, ...updates } = body;
-  const { data, error } = await supabase
-    .from("recruitment_requests")
-    .update(updates)
-    .eq("id", id)
-    .select()
-    .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  const { rows } = await sql`
+    UPDATE recruitment_requests
+    SET nick = ${updates.nick ?? ""}, name = ${updates.name ?? ""}, age = ${updates.age ?? ""},
+        ff_id = ${updates.ff_id ?? ""}, points = ${updates.points ?? 0},
+        experience = ${updates.experience ?? ""}, reason = ${updates.reason ?? ""},
+        contact = ${updates.contact ?? ""}, email = ${updates.email ?? ""},
+        photo = ${updates.photo ?? ""}, status = ${updates.status ?? "pending"},
+        roles = COALESCE(${updates.roles ? JSON.stringify(updates.roles) : null}::jsonb, roles)
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return NextResponse.json(rows[0]);
 }
 
 export async function DELETE(request: Request) {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const { id } = await request.json();
-  const { error } = await supabase
-    .from("recruitment_requests")
-    .delete()
-    .eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await sql`DELETE FROM recruitment_requests WHERE id = ${id}`;
   return NextResponse.json({ ok: true });
 }

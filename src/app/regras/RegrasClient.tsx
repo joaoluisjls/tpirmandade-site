@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSupabase } from "@/lib/supabase-browser";
-
 interface Rule {
   id: string;
   title: string;
@@ -21,9 +19,12 @@ export default function RegrasClient({ initialRules }: { initialRules: Rule[] })
   const [rules, setRules] = useState<Rule[]>(initialRules);
 
   useEffect(() => {
-    getSupabase().from("rules").select("id, title, content, category").order("id", { ascending: true }).then(({ data }) => {
-      if (data) setRules(data);
-    });
+    fetch("/api/rules", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setRules(data);
+      })
+      .catch(console.error);
   }, []);
 
   return (
