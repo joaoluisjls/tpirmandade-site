@@ -9,6 +9,7 @@ const FOOTER_LINKS = [
   { href: "/guerras", label: "Guerras" },
   { href: "/regras", label: "Regras" },
   { href: "/recrutamento", label: "Recrutamento" },
+  { href: "/meu-perfil", label: "Meu Perfil" },
 ];
 
 export function Footer() {

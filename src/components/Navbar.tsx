@@ -14,6 +14,7 @@ const ALL_NAV_LINKS = [
   { href: "/conquistas", label: "Conquistas" },
   { href: "/regras", label: "Regras" },
   { href: "/recrutamento", label: "Recrutamento", publicOnly: true },
+  { href: "/meu-perfil", label: "Meu Perfil" },
 ];
 
 export function Navbar() {
