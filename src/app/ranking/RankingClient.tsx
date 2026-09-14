@@ -92,15 +92,10 @@ export default function RankingClient({
 
   const filteredPlayers = useMemo(() => {
     let list = [...players];
-    if (hasPeriodSelection) {
-      list = list.map((p) => ({ ...p, points: periodPoints[p.nick] ?? p.points }));
-    }
     list.sort((a, b) => b.points - a.points);
     if (search) list = list.filter((p) => p.nick.toLowerCase().includes(search.toLowerCase()));
     return list;
-  }, [search, players, periodPoints, selectedPeriod, hasPeriodSelection]);
-
-  const totalFiltered = filteredPlayers.reduce((sum, p) => sum + p.points, 0);
+  }, [search, players]);
 
   const getWeeklyPts = (player: Player): number => {
     if (hasPeriodSelection) return periodPoints[player.nick] ?? 0;
@@ -134,7 +129,7 @@ export default function RankingClient({
               </select>
               {selectedPeriod && (
                 <div className="text-sm text-white/40">
-                  Total Semana: <span className="font-bold text-primary">{totalFiltered.toLocaleString()}</span> pts | Total Guilda: <span className="font-bold text-purple-400">{pointsTotal.toLocaleString()}</span> pts
+                  Total Semana: <span className="font-bold text-primary">{Object.values(periodPoints).reduce((s, v) => s + v, 0).toLocaleString()}</span> pts | Total Guilda: <span className="font-bold text-purple-400">{pointsTotal.toLocaleString()}</span> pts
                 </div>
               )}
             </div>
@@ -152,7 +147,7 @@ export default function RankingClient({
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/5">
-                  {["#", "Jogador", "Experiência", "Pontos Semanais", "Pontos Totais", "Pontos Individuais", "Status"].map((h) => (
+                  {["#", "Jogador", "Experiência", "Pontos Semana", "Pontos Individual", "Pontos Totais", "Status"].map((h) => (
                     <th key={h} className={`text-xs font-bold text-white/40 uppercase tracking-wider px-3 py-3 ${h === "#" || h === "Status" ? "text-center" : h === "Jogador" ? "text-left" : "text-right"}`}>{h}</th>
                   ))}
                 </tr>
@@ -160,7 +155,6 @@ export default function RankingClient({
               <tbody>
                 {filteredPlayers.map((player, i) => {
                   const weeklyPts = getWeeklyPts(player);
-                  const individualPts = player.points;
                   return (
                     <tr key={player.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
                       <td className="px-3 py-3 text-center font-black text-white/30">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</td>
@@ -172,8 +166,8 @@ export default function RankingClient({
                       </td>
                       <td className="px-3 py-3 text-right text-sm text-white/60">{player.role}</td>
                       <td className="px-3 py-3 text-right text-sm font-bold text-primary">{weeklyPts.toLocaleString()}</td>
+                      <td className="px-3 py-3 text-right text-sm font-bold text-emerald-400">{player.points.toLocaleString()}</td>
                       <td className="px-3 py-3 text-right text-sm font-bold text-purple-400">{pointsTotal.toLocaleString()}</td>
-                      <td className="px-3 py-3 text-right text-sm font-bold text-emerald-400">{individualPts.toLocaleString()}</td>
                       <td className="px-3 py-3 text-center">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium ${player.status === "online" ? "bg-emerald-500/10 text-emerald-400" : player.status === "away" ? "bg-yellow-500/10 text-yellow-400" : "bg-white/5 text-white/30"}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${player.status === "online" ? "bg-emerald-400" : player.status === "away" ? "bg-yellow-400" : "bg-white/30"}`} />
@@ -199,8 +193,7 @@ export default function RankingClient({
                   </div>
                   <div className="flex gap-4 text-xs text-white/50 ml-12">
                     <span>📅 Semana: {weeklyPts.toLocaleString()} pts</span>
-                    <span>🏆 Total: {pointsTotal.toLocaleString()}</span>
-                    <span>👤 Ind.: {player.points.toLocaleString()}</span>
+                    <span>👤 Ind.: {player.points.toLocaleString()} pts</span>
                   </div>
                 </Link>
               );

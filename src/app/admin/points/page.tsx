@@ -37,10 +37,10 @@ export default function AdminPointsPage() {
 
     setSaving(true);
     try {
-      const body: any = { action: "save", data: { weekly: {}, individual: {}, total: 0 } };
+      const body: any = { action: "save", data: { weekly: {}, individual: {}, total: {} } };
       if (manualType === "semana") body.data.weekly = { [manualNick]: pts };
       else if (manualType === "individual") body.data.individual = { [manualNick]: pts };
-      else body.data.total = pts;
+      else body.data.total = { [manualNick]: pts };
 
       const res = await fetch("/api/points", {
         method: "PUT",

@@ -10,6 +10,8 @@ interface PlayerData {
   bio: string;
   phone: string;
   email: string;
+  points: number;
+  weekly_evolution: { week: string; points: number }[];
 }
 
 export default function MeuPerfilPage() {
@@ -93,6 +95,31 @@ export default function MeuPerfilPage() {
 
           <form onSubmit={handleSave} className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 space-y-4">
             {error && <div className="text-sm text-red-400 bg-red-500/10 rounded-lg px-4 py-2">{error}</div>}
+
+            {/* Pontos do jogador */}
+            <div className="rounded-xl border border-white/5 bg-white/[0.03] p-4">
+              <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">Meus Pontos</h3>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center">
+                  <div className="text-lg font-black text-primary">{(player.points || 0).toLocaleString()}</div>
+                  <div className="text-[10px] text-white/30 uppercase">Individual</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-black text-purple-400">
+                    {player.weekly_evolution?.length > 0
+                      ? (player.weekly_evolution[player.weekly_evolution.length - 1]?.points || 0).toLocaleString()
+                      : 0}
+                  </div>
+                  <div className="text-[10px] text-white/30 uppercase">Semana</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-black text-emerald-400">
+                    {(player.points || 0).toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-white/30 uppercase">Total</div>
+                </div>
+              </div>
+            </div>
 
             <div className="text-center">
               <div className="relative inline-block">

@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
   if (email) {
     const { rows } = await sql`
-      SELECT id, nick, name, email FROM players
+      SELECT id, nick, name, email, points, weekly_evolution FROM players
       WHERE LOWER(email) = ${email.toLowerCase().trim()}
     `;
     return NextResponse.json({ found: rows.length > 0, player: rows[0] || null });
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
   if (nick) {
     const { rows } = await sql`
-      SELECT id, nick, name, avatar, bio, phone, email FROM players
+      SELECT id, nick, name, avatar, bio, phone, email, points, weekly_evolution FROM players
       WHERE LOWER(nick) = ${nick.toLowerCase().trim()}
     `;
     if (rows.length === 0) {
