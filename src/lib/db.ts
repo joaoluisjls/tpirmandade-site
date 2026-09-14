@@ -83,24 +83,6 @@ export async function ensureTables() {
   `;
 
   await sql`
-    CREATE TABLE IF NOT EXISTS mvp (
-      id TEXT PRIMARY KEY,
-      player_id TEXT DEFAULT '',
-      nick TEXT DEFAULT '',
-      avatar TEXT DEFAULT '',
-      period TEXT DEFAULT '',
-      points INTEGER DEFAULT 0,
-      matches INTEGER DEFAULT 0,
-      wins INTEGER DEFAULT 0,
-      kills INTEGER DEFAULT 0,
-      deaths INTEGER DEFAULT 0,
-      kd NUMERIC DEFAULT 0,
-      headshots INTEGER DEFAULT 0,
-      reason TEXT DEFAULT ''
-    );
-  `;
-
-  await sql`
     CREATE TABLE IF NOT EXISTS championships (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL DEFAULT '',
@@ -121,21 +103,11 @@ export async function ensureTables() {
   `;
 
   await sql`
-    CREATE TABLE IF NOT EXISTS recruitment_requests (
+    CREATE TABLE IF NOT EXISTS admins (
       id TEXT PRIMARY KEY,
-      nick TEXT NOT NULL DEFAULT '',
-      name TEXT NOT NULL DEFAULT '',
-      age TEXT NOT NULL DEFAULT '',
-      ff_id TEXT NOT NULL DEFAULT '',
-      points INTEGER DEFAULT 0,
-      experience TEXT NOT NULL DEFAULT '',
-      reason TEXT NOT NULL DEFAULT '',
-      contact TEXT NOT NULL DEFAULT '',
-      email TEXT NOT NULL DEFAULT '',
-      photo TEXT NOT NULL DEFAULT '',
-      status TEXT NOT NULL DEFAULT 'pending',
-      created_at TEXT NOT NULL DEFAULT '',
-      roles JSONB DEFAULT '[]'
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT ''
     );
   `;
 }

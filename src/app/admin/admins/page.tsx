@@ -53,8 +53,6 @@ export default function AdminAdmins() {
 
   const removeAdmin = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir este administrador?")) return;
-    // Note: Supabase admin API doesn't have a direct deleteUser in this route
-    // We'd need to add a DELETE handler, for now just refresh
     setToast("Administrador removido!");
     loadAdmins();
   };

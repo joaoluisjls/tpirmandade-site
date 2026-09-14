@@ -181,56 +181,6 @@ export function generateBracketEmpty(totalSlots: number): Match[] {
   return matches;
 }
 
-export function generateBracket(participants: Participant[]): Match[] {
-  const n = participants.length;
-  if (n === 0) return [];
-  if (n === 1) {
-    return [{
-      id: `match_final_0`, round: 0, position: 0,
-      participant1: participants[0], participant2: null,
-      score1: null, score2: null, winner: participants[0].id,
-      status: "finished", nextMatchId: null, nextSlot: null,
-    }];
-  }
-  const matches = generateBracketEmpty(n);
-  const size = nextPowerOf2(n);
-  const seeded = [...participants];
-  while (seeded.length < size) {
-    seeded.push({ id: `bye_${seeded.length}`, name: "BYE", logo: "" });
-  }
-  const seeds = seeded.map((p, i) => ({ participant: p, seed: i + 1 }));
-  const sortedSeeds = [...seeds].sort((a, b) => a.seed - b.seed);
-  const pairs: [number, number][] = [];
-  for (let i = 0; i < size / 2; i++) { pairs.push([i, size - 1 - i]); }
-
-  for (let m = 0; m < matches.length; m++) {
-    const match = matches[m];
-    if (match.round !== 0) continue;
-    const [topIdx, bottomIdx] = pairs[m] || [0, 0];
-    const top = sortedSeeds[topIdx]?.participant || null;
-    const bottom = sortedSeeds[bottomIdx]?.participant || null;
-    const topIsBye = top?.name === "BYE";
-    const bottomIsBye = bottom?.name === "BYE";
-    if (topIsBye && bottomIsBye) { match.participant1 = null; match.participant2 = null; }
-    else if (topIsBye) { match.participant1 = null; match.participant2 = bottom; match.winner = bottom?.id || null; match.status = "finished"; }
-    else if (bottomIsBye) { match.participant1 = top; match.participant2 = null; match.winner = top?.id || null; match.status = "finished"; }
-    else { match.participant1 = top; match.participant2 = bottom; }
-  }
-
-  for (const match of matches) {
-    if (match.winner && match.nextMatchId) {
-      const nextMatch = matches.find((mm) => mm.id === match.nextMatchId);
-      if (nextMatch) {
-        const wp = [match.participant1, match.participant2].find((p) => p?.id === match.winner);
-        if (match.nextSlot === 1) nextMatch.participant1 = wp || null;
-        else nextMatch.participant2 = wp || null;
-      }
-    }
-  }
-
-  return matches;
-}
-
 export function advanceWinner(matches: Match[], matchId: string, winnerId: string): Match[] {
   const updated = matches.map((m) => ({ ...m }));
   const match = updated.find((m) => m.id === matchId);

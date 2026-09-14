@@ -48,6 +48,4 @@ export async function getSession(): Promise<{ email: string } | null> {
   return { email };
 }
 
-export async function requireAdmin() {
-  return await getSession();
-}
+
