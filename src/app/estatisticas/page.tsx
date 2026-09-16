@@ -10,18 +10,22 @@ export const metadata: Metadata = {
 };
 
 export default async function EstatisticasPage() {
-  const [playersResult, leadersResult, totalResult] = await Promise.all([
+  const [playersResult, leadersResult, totalResult, guildResult] = await Promise.all([
     sql`SELECT id, nick, name, role, avatar, status, points FROM players ORDER BY points DESC LIMIT 100`,
     sql`SELECT key, value FROM guild_settings WHERE key IN ('guild_owner_nick', 'guild_admin_nicks')`,
     sql`SELECT value FROM guild_settings WHERE key = 'points_total'`,
+    sql`SELECT key, value FROM guild_settings WHERE key IN ('guild_name', 'guild_tag', 'guild_slogan', 'guild_motto', 'guild_description', 'discord', 'instagram', 'tiktok', 'youtube', 'whatsapp')`,
   ]);
 
   const leadersMap: Record<string, string> = {};
   leadersResult.rows.forEach((item: any) => { leadersMap[item.key] = item.value; });
 
+  const guildMap: Record<string, string> = {};
+  guildResult.rows.forEach((item: any) => { guildMap[item.key] = item.value; });
+
   const totalPoints = totalResult.rows[0] ? JSON.parse(totalResult.rows[0].value) : 0;
   const owner = leadersMap.guild_owner_nick || "";
   const admins = leadersMap.guild_admin_nicks ? leadersMap.guild_admin_nicks.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
 
-  return <EstatisticasClient initialPlayers={(playersResult.rows as any[]) ?? []} initialSettings={{}} initialOwner={owner} initialAdmins={admins} initialPointsTotal={totalPoints} />;
+  return <EstatisticasClient initialPlayers={(playersResult.rows as any[]) ?? []} initialSettings={guildMap} initialOwner={owner} initialAdmins={admins} initialPointsTotal={totalPoints} />;
 }
