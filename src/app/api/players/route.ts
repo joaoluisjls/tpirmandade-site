@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const { rows } = await sql`
     SELECT id, nick, name, role, status, points, avatar, joined_at, bio, matches, wins, kills, deaths, kd, headshots, headshot_rate, avg_damage, win_rate
-    FROM players ORDER BY points DESC
+    FROM players ORDER BY points DESC LIMIT 200
   `;
   return NextResponse.json(rows, {
     headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" },

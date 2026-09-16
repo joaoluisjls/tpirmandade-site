@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const { rows } = await sql`
     SELECT id, title, content, category
-    FROM rules ORDER BY id ASC
+    FROM rules ORDER BY id ASC LIMIT 50
   `;
   return NextResponse.json(rows, {
     headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=240" },

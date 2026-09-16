@@ -29,16 +29,6 @@ export async function GET() {
   return NextResponse.json(await getContacts());
 }
 
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { playerId, data } = body;
-  if (!playerId) return NextResponse.json({ error: "playerId required" }, { status: 400 });
-  const contacts = await getContacts();
-  contacts[playerId] = { ...(contacts[playerId] || {}), ...data };
-  await saveContacts(contacts);
-  return NextResponse.json({ ok: true });
-}
-
 export async function PUT(req: NextRequest) {
   const body = await req.json();
   const { playerId, data } = body;

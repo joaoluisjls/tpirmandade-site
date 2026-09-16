@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   }
 
   const { rows } = await sql`
-    SELECT * FROM admins WHERE email = ${email.toLowerCase().trim()}
+    SELECT id, email, password_hash FROM admins WHERE email = ${email.toLowerCase().trim()}
   `;
 
   if (rows.length === 0) {

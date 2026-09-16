@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const { rows } = await sql`
-    SELECT id, nick, points FROM players ORDER BY nick ASC
+    SELECT id, nick, points FROM players ORDER BY nick ASC LIMIT 200
   `;
   return NextResponse.json(rows);
 }

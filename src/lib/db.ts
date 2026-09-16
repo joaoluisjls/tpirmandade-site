@@ -32,7 +32,10 @@ export async function ensureTables() {
       win_rate NUMERIC DEFAULT 0,
       points INTEGER NOT NULL DEFAULT 0,
       weekly_evolution JSONB DEFAULT '[]',
-      achievements JSONB DEFAULT '[]'
+      achievements JSONB DEFAULT '[]',
+      pin TEXT NOT NULL DEFAULT '',
+      phone TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL DEFAULT ''
     );
   `;
 
@@ -79,26 +82,6 @@ export async function ensureTables() {
       title TEXT NOT NULL DEFAULT '',
       content TEXT NOT NULL DEFAULT '',
       category TEXT NOT NULL DEFAULT ''
-    );
-  `;
-
-  await sql`
-    CREATE TABLE IF NOT EXISTS championships (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL DEFAULT '',
-      description TEXT NOT NULL DEFAULT '',
-      date TEXT NOT NULL DEFAULT '',
-      time TEXT NOT NULL DEFAULT '',
-      status TEXT NOT NULL DEFAULT 'open',
-      prize TEXT NOT NULL DEFAULT '',
-      rules TEXT NOT NULL DEFAULT '',
-      notes TEXT NOT NULL DEFAULT '',
-      participants JSONB DEFAULT '[]',
-      matches_data JSONB DEFAULT '[]',
-      groups JSONB DEFAULT '[]',
-      champion JSONB,
-      created_at TEXT NOT NULL DEFAULT '',
-      format TEXT NOT NULL DEFAULT 'bracket'
     );
   `;
 
